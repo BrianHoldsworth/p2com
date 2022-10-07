@@ -1,0 +1,5 @@
+bin/
+.vscode/
+*.lst
+*.obj
+*.txt
