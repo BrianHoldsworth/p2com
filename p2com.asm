@@ -17,11 +17,7 @@
 ;	  0.1	- Added Propeller II instructions
 ;	  0.2	- Adapted from TASM32 to fasm
 ;
-if defined win32
-			format MS COFF
-else
-			format ELF
-end if
+include '%PLATFORM%.asm'
 ;
 ; Public routines
 ;
@@ -77,28 +73,6 @@ inline_locals		=	1E0h
 debug_size_limit	=	2A00h
 
 clkfreq_address		=	044h
-;
-;
-; Cross platform code/data sections
-if defined win32
-macro codeseg
-{
-		section '.TEXT' code readable executable
-}
-macro udataseg
-{
-		section '.BSS' data writable
-}
-else
-macro codeseg
-{
-		section '.TEXT' executable
-}
-macro udataseg
-{
-		section '.BSS' writable
-}
-end if
 ;
 ;
 ; Simple conversion TASM->FASM macro syntax

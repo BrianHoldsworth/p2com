@@ -19,8 +19,10 @@ PNut_v36 clock_setter -c
 set /A ERR = %ERR% + %ERRORLEVEL%
 type error.txt
 
-fasm -d linux=1 p2com.asm bin\p2com.elf
-fasm -d win32=1 p2com.asm bin\p2com.coff
+set /A PLATFORM=unix
+fasm p2com.asm bin\p2com.elf
+set /A PLATFORM=win32
+fasm p2com.asm bin\p2com.coff
 
 if %ERR% NEQ 0 (
     set /P input="ERROR: Press enter to continue: "
