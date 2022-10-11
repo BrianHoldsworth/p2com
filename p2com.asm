@@ -16437,22 +16437,26 @@ enter_symbol2_print:
 ;
 ; Find non-word 3-chr symbol
 ;
-find_symbol_s3:	syms	'+//',	type_op,	oc_remu
-		syms	'+<=',	type_op,	oc_lteu
-		syms	'+>=',	type_op,	oc_gteu
-		syms	'<=>',	type_op,	oc_ltegt
+; NOTE: fasm needs these quoted strings in reverse order, since
+; they get converted to LE byte-order numbers.
+find_symbol_s3:	syms	'//+',	type_op,	oc_remu
+		syms	'=<+',	type_op,	oc_lteu
+		syms	'=>+',	type_op,	oc_gteu
+		syms	'>=<',	type_op,	oc_ltegt
 
-		syms	'<>.',	type_op,	oc_fne
-		syms	'==.',	type_op,	oc_fe
-		syms	'<=.',	type_op,	oc_flte
-		syms	'>=.',	type_op,	oc_fgte
+		syms	'.><',	type_op,	oc_fne
+		syms	'.==',	type_op,	oc_fe
+		syms	'.=<',	type_op,	oc_flte
+		syms	'.=>',	type_op,	oc_fgte
 
 		ret
 ;
 ;
 ; Find non-word 2-chr symbol
 ;
-find_symbol_s2:	syms	':=',	type_assign,	0
+; NOTE: fasm needs these quoted strings in reverse order, since
+; they get converted to LE byte-order numbers.
+find_symbol_s2:	syms	'=:',	type_assign,	0
 		syms	'@@',	type_atat,	0
 		syms	'..',	type_dotdot,	0
 		syms	'~~',	type_tiltil,	0
@@ -16462,28 +16466,28 @@ find_symbol_s2:	syms	':=',	type_assign,	0
 
 		syms	'>>',	type_op,	oc_shr
 		syms	'<<',	type_op,	oc_shl
-		syms	'+/',	type_op,	oc_divu
+		syms	'/+',	type_op,	oc_divu
 		syms	'//',	type_op,	oc_rem
-		syms	'#>',	type_op,	oc_fge
-		syms	'<#',	type_op,	oc_fle
-		syms	'+<',	type_op,	oc_ltu
-		syms	'<=',	type_op,	oc_lte
+		syms	'>#',	type_op,	oc_fge
+		syms	'#<',	type_op,	oc_fle
+		syms	'<+',	type_op,	oc_ltu
+		syms	'=<',	type_op,	oc_lte
 		syms	'==',	type_op,	oc_e
-		syms	'<>',	type_op,	oc_ne
-		syms	'>=',	type_op,	oc_gte
-		syms	'+>',	type_op,	oc_gtu
+		syms	'><',	type_op,	oc_ne
+		syms	'=>',	type_op,	oc_gte
+		syms	'>+',	type_op,	oc_gtu
 		syms	'!!',	type_op,	oc_lognot
 		syms	'&&',	type_op,	oc_logand
 		syms	'^^',	type_op,	oc_logxor
 		syms	'||',	type_op,	oc_logor
 
 ;		syms	'-.',	type_op,	oc_fneg		(uses oc_fsub symbol)
-		syms	'<.',	type_op,	oc_flt
-		syms	'>.',	type_op,	oc_fgt
-		syms	'+.',	type_op,	oc_fadd
-		syms	'-.',	type_op,	oc_fsub
-		syms	'*.',	type_op,	oc_fmul
-		syms	'/.',	type_op,	oc_fdiv
+		syms	'.<',	type_op,	oc_flt
+		syms	'.>',	type_op,	oc_fgt
+		syms	'.+',	type_op,	oc_fadd
+		syms	'.-',	type_op,	oc_fsub
+		syms	'.*',	type_op,	oc_fmul
+		syms	'./',	type_op,	oc_fdiv
 
 		ret
 ;
