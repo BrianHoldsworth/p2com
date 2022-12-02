@@ -9,7 +9,7 @@
 ;*						*
 ;*	     Written by Chip Gracey		*
 ;*	 (C) 2006-2022 by Parallax, Inc.	*
-;*	    Last Updated: 02/25/2022		*
+;*	    Last Updated: 2022/11/19		*
 ;*						*
 ;************************************************
 ;
@@ -37,6 +37,7 @@ include '%PLATFORM%.asm'
 ;
 obj_limit		=	100000h		;must be same in delphi
 file_limit		=	32		;must be same in delphi
+param_limit		=	16		;must be same in delphi
 info_limit		=	1000		;must be same in delphi
 debug_data_limit	=	4000h		;must be same in delphi
 debug_string_limit	=	8000h		;must be same in delphi
@@ -45,7 +46,8 @@ debug_display_limit	=	1100		;must be same in delphi
 ddsymbols_limit_auto	=	1000h
 ddsymbols_limit_name	=	1000h
 
-symbols_limit_auto	=	8000h		;adjust as needed to accommodate auto symbols
+symbols_limit_param	=	400h
+symbols_limit_auto	=	10000h		;adjust as needed to accommodate auto symbols
 symbols_limit_main	=	40000h
 symbols_limit_local	=	8000h
 symbols_limit_inline	=	8000h
@@ -64,7 +66,7 @@ subs_limit		=	1024
 objs_limit		=	1024
 distiller_limit		=	4000h
 
-inline_limit		=	124h
+inline_limit		=	122h
 mrecv_reg		=	1D2h
 msend_reg		=	1D3h
 pasm_regs		=	1D8h
@@ -658,6 +660,7 @@ count		type_dot		;	.
 count		type_dotdot		;	..
 count		type_at			;	@
 count		type_atat		;	@@
+count		type_upat		;	^@
 count		type_til		;	~
 count		type_tiltil		;	~~
 count		type_inc		;	++
@@ -670,6 +673,7 @@ count		type_round		;	ROUND
 count		type_trunc		;	TRUNC
 count		type_constr		;	STRING
 count		type_block		;	CON, VAR, DAT, OBJ, PUB, PRI
+count		type_field		;	FIELD
 count		type_size		;	BYTE, WORD, LONG
 count		type_size_fit		;	BYTEFIT, WORDFIT
 count		type_fvar		;	FVAR, FVARS
@@ -788,7 +792,6 @@ count		bc_coginit
 count		bc_coginit_push
 count		bc_cogstop
 count		bc_cogid
-count		bc_cogchk
 
 count		bc_locknew
 count		bc_lockret
@@ -834,6 +837,9 @@ count		bc_con_rfbyte_decod_not
 count		bc_con_rfbyte_bmask
 count		bc_con_rfbyte_bmask_not
 
+count		bc_setup_field_p
+count		bc_setup_field_pi
+
 count		bc_setup_reg
 count		bc_setup_reg_pi
 
@@ -869,9 +875,8 @@ count		bc_setup_byte_pa
 count		bc_setup_word_pa
 count		bc_setup_long_pa
 
-count		bc_rotxy
-count		bc_polxy
-count		bc_xypol
+count		unused1
+count		unused2
 
 count		bc_ternary
 
@@ -941,11 +946,12 @@ counti		bc_read_local_0_15	,16
 counti		bc_write_local_0_15	,16
 
 
-countn		bc_repeat_var_init_1	,7Ch	;variable operator bytecodes
+countn		bc_repeat_var_init_1	,7Bh	;variable operator bytecodes
 count		bc_repeat_var_init
 count		bc_repeat_var_loop
 
-count		bc_addr
+count		bc_get_field
+count		bc_get_addr
 count		bc_read
 count		bc_write
 count		bc_write_push
@@ -1050,15 +1056,16 @@ count		bc_sca_write_push
 count		bc_scas_write_push
 count		bc_frac_write_push
 
-count		bc_setup_field_pop
-count		bc_setup_field_rfvar
-counti		bc_setup_field_0_31,32
+count		bc_setup_bfield_pop
+count		bc_setup_bfield_rfvar
+counti		bc_setup_bfield_0_31,32
 
 
 count2n		bc_hubset		,54h	;hub bytecodes, miscellaneous (step by 2)
 count2		bc_clkset
 count2		bc_read_clkfreq
 count2		bc_cogspin
+count2		bc_cogchk
 count2		bc_inline
 count2		bc_regexec
 count2		bc_regload
@@ -1073,6 +1080,8 @@ count2		bc_longmove
 count2		bc_longfill
 count2		bc_strsize
 count2		bc_strcomp
+count2		bc_strcopy
+count2		bc_getcrc
 count2		bc_waitus
 count2		bc_waitms
 count2		bc_getms
@@ -1080,24 +1089,27 @@ count2		bc_getsec
 count2		bc_muldiv64
 count2		bc_qsin
 count2		bc_qcos
+count2		bc_rotxy
+count2		bc_polxy
+count2		bc_xypol
 
-count2		bc_float			;hub bytecodes, floating point
-count2		bc_trunc
-count2		bc_round
-count2		bc_nan
+count2		bc_nan				;hub bytecodes, floating point
 count2		bc_fneg
 count2		bc_fabs
+count2		bc_fsqrt
+count2		bc_fadd
+count2		bc_fsub
+count2		bc_fmul
+count2		bc_fdiv
 count2		bc_flt
 count2		bc_fgt
 count2		bc_fne
 count2		bc_fe
 count2		bc_flte
 count2		bc_fgte
-count2		bc_fsqrt
-count2		bc_fadd
-count2		bc_fsub
-count2		bc_fmul
-count2		bc_fdiv
+count2		bc_round
+count2		bc_trunc
+count2		bc_float
 ;
 ;
 ; Flex codes
@@ -1118,7 +1130,7 @@ flexcode	fc_coginit,	bc_coginit,	3,	0,	0,	0	;(also asm instruction)
 flexcode	fc_coginit_push,bc_coginit_push,3,	1,	0,	0
 flexcode	fc_cogstop,	bc_cogstop,	1,	0,	0,	0	;(also asm instruction)
 flexcode	fc_cogid,	bc_cogid,	0,	1,	0,	0	;(also asm instruction)
-flexcode	fc_cogchk,	bc_cogchk,	1,	1,	0,	0
+flexcode	fc_cogchk,	bc_cogchk,	1,	1,	0,	1
 
 flexcode	fc_getrnd,	bc_getrnd,	0,	1,	0,	0	;(also asm instruction)
 flexcode	fc_getct,	bc_getct,	0,	1,	0,	0	;(also asm instruction)
@@ -1141,10 +1153,6 @@ flexcode	fc_wypin,	bc_wypin,	2,	0,	1,	0	;(also asm instruction)
 flexcode	fc_akpin,	bc_akpin,	1,	0,	1,	0	;(also asm instruction)
 flexcode	fc_rdpin,	bc_rdpin,	1,	1,	0,	0	;(also asm instruction)
 flexcode	fc_rqpin,	bc_rqpin,	1,	1,	0,	0	;(also asm instruction)
-
-flexcode	fc_rotxy,	bc_rotxy,	3,	2,	0,	0
-flexcode	fc_polxy,	bc_polxy,	2,	2,	0,	0
-flexcode	fc_xypol,	bc_xypol,	2,	2,	0,	0
 
 flexcode	fc_locknew,	bc_locknew,	0,	1,	0,	0	;(also asm instruction)
 flexcode	fc_lockret,	bc_lockret,	1,	0,	0,	0	;(also asm instruction)
@@ -1173,6 +1181,9 @@ flexcode	fc_longfill,	bc_longfill,	3,	0,	0,	1
 
 flexcode	fc_strsize,	bc_strsize,	1,	1,	0,	1
 flexcode	fc_strcomp,	bc_strcomp,	2,	1,	0,	1
+flexcode	fc_strcopy,	bc_strcopy,	3,	0,	0,	1
+
+flexcode	fc_getcrc,	bc_getcrc,	3,	1,	0,	1
 
 flexcode	fc_waitus,	bc_waitus,	1,	0,	0,	1
 flexcode	fc_waitms,	bc_waitms,	1,	0,	0,	1
@@ -1181,11 +1192,14 @@ flexcode	fc_getsec,	bc_getsec,	0,	1,	0,	1
 flexcode	fc_muldiv64,	bc_muldiv64,	3,	1,	0,	1
 flexcode	fc_qsin,	bc_qsin,	3,	1,	0,	1
 flexcode	fc_qcos,	bc_qcos,	3,	1,	0,	1
+flexcode	fc_rotxy,	bc_rotxy,	3,	2,	0,	1
+flexcode	fc_polxy,	bc_polxy,	2,	2,	0,	1
+flexcode	fc_xypol,	bc_xypol,	2,	2,	0,	1
 
-flexcode	fc_float,	bc_float,	1,	1,	0,	1
-flexcode	fc_trunc,	bc_trunc,	1,	1,	0,	1
-flexcode	fc_round,	bc_round,	1,	1,	0,	1
 flexcode	fc_nan,		bc_nan,		1,	1,	0,	1
+flexcode	fc_round,	bc_round,	1,	1,	0,	1
+flexcode	fc_trunc,	bc_trunc,	1,	1,	0,	1
+flexcode	fc_float,	bc_float,	1,	1,	0,	1
 ;
 ;
 ; Operators
@@ -1498,6 +1512,11 @@ ddx		doc					;doc pointer (limit and length follow)
 ddx		doc_limit				;doc limit
 ddx		doc_length				;doc length
 
+ddx		params						;object parameters
+dbx		param_names,param_limit*32			;object parameter names
+dbx		param_types,param_limit				;object parameter types
+ddx		param_values,param_limit			;object parameter values
+
 dbx		obj,obj_limit				;object buffer
 ddx		obj_ptr					;object length
 
@@ -1505,6 +1524,10 @@ ddx		obj_files				;object file count
 dbx		obj_filenames,file_limit*256		;object filenames
 ddx		obj_name_start,file_limit		;object filenames source start
 ddx		obj_name_finish,file_limit		;object filenames source finish
+ddx		obj_params,file_limit				;object parameters
+dbx		obj_param_names,file_limit*param_limit*32	;object parameter names
+dbx		obj_param_types,file_limit*param_limit		;object parameter types
+ddx		obj_param_values,file_limit*param_limit		;object parameter values
 ddx		obj_offsets,file_limit			;object offsets
 ddx		obj_lengths,file_limit			;object lengths
 dbx		obj_data,obj_limit			;object data
@@ -1518,16 +1541,6 @@ ddx		dat_name_finish,file_limit		;data filenames source finish
 ddx		dat_offsets,file_limit			;data offsets
 ddx		dat_lengths,file_limit			;data lengths
 dbx		dat_data,obj_limit			;data data
-
-ddx		pre_files				;precompile file count
-dbx		pre_filenames,file_limit*256		;precompile filenames
-ddx		pre_name_start,file_limit		;precompile filenames source start
-ddx		pre_name_finish,file_limit		;precompile filenames source finish
-
-ddx		arc_files				;archive file count
-dbx		arc_filenames,file_limit*256		;archive filenames
-ddx		arc_name_start,file_limit		;archive filenames source start
-ddx		arc_name_finish,file_limit		;archive filenames source finish
 
 ddx		info_count				;info count
 ddx		info_start,info_limit			;info source start
@@ -1799,13 +1812,13 @@ error_aanawiac:	call	set_error
 		db	'ALIGNW/ALIGNL not allowed within inline assembly code',0
 
 error_ainafbf:	call	set_error
-		db	'@ is not allowed for bitfield',0
+		db	'@ is not allowed for bitfields, use ^@ to get field pointer',0
 
 error_amnex:	call	set_error
 		db	'Address must not exceed $FFFFF',0
 
 error_arina:	call	set_error
-		db	'@register is not allowed',0
+		db	'@register is not allowed, use ^@ to get field pointer',0
 
 error_bmbpbb:	call	set_error
 		db	'"}" must be preceeded by "{" to form a comment',0
@@ -1962,6 +1975,9 @@ error_eaupn:	call	set_error
 
 error_eaurn:	call	set_error
 		db	'Expected a unique result name',0
+
+error_eas:	call	set_error
+		db	'Expected a symbol',0
 
 error_eaumn:	call	set_error
 		db	'Expected a unique method name',0
@@ -2132,7 +2148,7 @@ error_internal:	call	set_error
 		db	'Internal',0
 
 error_iolmbbx:	call	set_error
-		db	'Inline origin/limit must be below $134',0	;TESTT make sure address is up-to-date
+		db	'Inline origin/limit must be below $122',0	;TESTT make sure address is up-to-date
 
 error_ionaifpe:	call	set_error
 		db	'Integer operator not allowed in floating-point expression',0
@@ -2320,6 +2336,12 @@ error_ticobu:	call	set_error
 error_tioawarb:	call	set_error
 		db	'This instruction is only allowed within a REPEAT block',0
 
+error_tmop:	call	set_error
+		db	'Too many object parameters',0
+
+error_tmpd:	call	set_error
+		db	'Too much parameter data',0
+
 error_tmrmr:	call	set_error
 		db	'This method returns multiple results',0
 
@@ -2400,6 +2422,7 @@ ddx		esp_save			;stack pointer for abort
 _compile1:	mov	[error],1		;init error to true
 		mov	[esp_save],esp		;save esp in case of error
 
+		call	enter_symbols_param	;enter parameter symbols
 		call	reset_symbols_main	;reset main symbols
 		call	reset_symbols_local	;reset local symbols
 		call	reset_symbols_inline	;reset inline symbols
@@ -2417,8 +2440,7 @@ _compile1:	mov	[error],1		;init error to true
 
 		call	determine_mode		;determine compiler mode (Spin/PASM)
 
-		call	compile_dev_blocks	;compile dev blocks
-		call	compile_con_blocks_1st	;compile con blocks (1st pass)
+		call	compile_con_blocks	;compile con blocks
 		call	compile_obj_blocks_id	;compile obj blocks' id's
 		call	compile_sub_blocks_id	;compile sub blocks' id's
 		call	compile_dat_blocks_fn	;compile dat blocks' filenames
@@ -2432,7 +2454,6 @@ _compile2:	mov	[error],1		;init error to true
 		mov	[esp_save],esp		;save esp in case of error
 
 		call	compile_obj_symbols	;compile obj symbols
-		call	compile_con_blocks_2nd	;compile con blocks (2nd pass)
 		call	determine_clock		;determine clock settings
 		call	determine_bauds_pins	;determine bauds and debug pins
 		call	compile_var_blocks	;compile var blocks
@@ -2746,8 +2767,8 @@ print_symbol2:	push	eax
 		ret
 
 
-.@list:		db	'CON          ',0
-.@list2:	db	'CON_FLOAT    ',0
+.@list		db	'CON          ',0
+.@list2		db	'CON_FLOAT    ',0
 		db	'REG          ',0
 		db	'LOC_BYTE     ',0
 		db	'LOC_WORD     ',0
@@ -3006,113 +3027,13 @@ determine_mode:	call	reset_element
 
 ;
 ;
-; Compile dev blocks
-;
-compile_dev_blocks:
-
-		mov	[pre_files],0		;reset pre file count
-		mov	[arc_files],0		;reset arc file count
-
-		call	reset_element		;reset element
-
-.nextblock:	mov	dl,block_dev		;scan for dev block
-		call	next_block
-
-.nextline:	call	get_element		;get element, check for eof
-		jc	.done
-
-		cmp	al,type_end		;check for end
-		je	.nextline
-
-		cmp	al,type_precompile	;check for 'precompile'
-		mov	edx,pre_files
-		mov	[.@files],pre_filenames
-		mov	[.@start],pre_name_start
-		mov	[.@finish],pre_name_finish
-		mov	[.@error],error_loxupfe
-		je	.filename
-
-		cmp	al,type_archive		;check for 'archive'
-		mov	edx,arc_files
-		mov	[.@files],arc_filenames
-		mov	[.@start],arc_name_start
-		mov	[.@finish],arc_name_finish
-		mov	[.@error],error_loxuafe
-		je	.filename
-
-		cmp	al,type_block		;check for block
-		jne	error_epoa
-
-		call	back_element		;back up
-		jmp	.nextblock		;resume scan for next dev block
-
-
-.filename:	call	get_filename		;get filename with length
-		inc	ecx			;include zero-terminator
-
-		xor	ebx,ebx			;check against other filenames
-.check:	lea	esi,[filename]		;get pointers
-		mov	edi,ebx
-		shl	edi,8
-		add	edi,[.@files]
-
-		cmp	ebx,[edx]		;if end of filenames, new
-		je	.new
-
-		push	ecx			;compare filenames
-	repe	cmpsb
-		pop	ecx
-		je	.got			;if equal, got
-		inc	ebx			;try next filename
-		jmp	.check
-
-.new:		inc	dword [edx]		;unique file, check files limit
-		cmp	dword [edx],file_limit
-		ja	.limiterror
-
-	rep	movsb				;enter filename
-
-		mov	eax,[.@start]		;save filename pointers
-		push	[filename_start]
-		pop	dword [eax+ebx*4]
-		mov	eax,[.@finish]
-		push	[filename_finish]
-		pop	dword [eax+ebx*4]
-
-.got:		call	get_end			;get end
-		jmp	.nextline	;get next line
-
-.done:		ret
-
-
-.limiterror:	mov	eax,[.@error]		;file limit exceeded, jmp to error_???
-		jmp	eax
-
-
-		udataseg
-ddx		.@files
-ddx		.@start
-ddx		.@finish
-ddx		.@error
-		codeseg
-;
-;
 ; Compile con blocks
 ;
-compile_con_blocks_1st:
-
-		mov	al,0			;first pass
-		jmp	compile_con_blocks
-
-compile_con_blocks_2nd:
-
-		mov	al,1			;second pass
-
 compile_con_blocks:
 
-		mov	[.@pass],al		;set pass
+		mov	[.@pass],0		;set pass
 
-		call	reset_element		;reset element
+.nextpass:	call	reset_element		;reset element
 		jmp		.autoblock
 
 .nextblock:	mov	dl,block_con		;scan for con block
@@ -3197,7 +3118,9 @@ compile_con_blocks:
 		add	[.@enum_value],ebx
 
 
-.assign:	cmp	[.@assign_flag],0	;if assign flag clear, verify assign type and value
+.assign:	call	.checkparam		;if symbol is a parameter, substitute the parameter value
+
+		cmp	[.@assign_flag],0	;if assign flag clear, verify assign type and value
 		je		.verify
 
 		mov	al,info_con		;assign, set info
@@ -3258,13 +3181,38 @@ compile_con_blocks:
 		call	get_element		;comma, get next element, sameline
 		jmp		.sameline
 
-.done:		ret
+.done:		inc	[.@pass]		;another pass?
+		cmp	[.@pass],1
+		je	.nextpass
+
+		ret
 
 
 .tryvalueint:	mov	bl,[.@pass]		;try to get int value
 		xor	bl,1
 		call	try_value_int
 		test	[exp_flags],100b	;z=0 if unresolved
+		ret
+
+
+.checkparam:	push	ebx			;if symbol is a parameter, substitute the parameter value
+		lea	esi,[symbol2]
+		lea	edi,[symbol]
+		mov	ecx,32
+	rep	movsb
+		call	find_param
+		cmp	al,type_undefined
+		jne	.param
+		pop	ebx
+		ret
+
+.param:	mov	[.@float],0		;symbol is a parameter
+		cmp	al,type_con
+		je	.paramint
+		inc	[.@float]
+.paramint:	mov	[.@assign_type],al
+		mov	[.@assign_value],ebx
+		pop	eax
 		ret
 
 		udataseg
@@ -3325,60 +3273,84 @@ compile_obj_blocks_id:
 		call	get_filename		;get filename with length
 		inc	ecx			;include zero-terminator
 
-		mov	[.@file],0		;check against other filenames
-.check:	lea	esi,[filename]		;get pointers
-		mov	edi,[.@file]
+		mov	edx,[obj_files]		;get file number and check limit
+		cmp	edx,file_limit
+		je	error_loxuoe
+
+		mov	edi,edx			;enter filename
 		shl	edi,8
 		add	edi,obj_filenames
+		lea	esi,[filename]
+	rep	movsb
 
-		mov	eax,[.@file]		;if end of filenames, new
-		cmp	eax,[obj_files]
-		je		.new
-
-		push	ecx			;compare filenames
-	repe	cmpsb
-		pop	ecx
-		je	.got		;if equal, got
-		inc	[.@file]		;try next filename
-		jmp		.check
-
-.new:		inc	[obj_files]		;unique file, check files limit
-		cmp	[obj_files],file_limit
-		ja	error_loxuoe
-
-	rep	movsb				;enter filename
-
-		mov	ebx,[.@file]		;enter filename source pointers
-		mov	eax,[filename_start]
-		mov	[obj_name_start+ebx*4],eax
+		mov	eax,[filename_start]	;enter filename source pointers
+		mov	[obj_name_start+edx*4],eax
 		mov	eax,[filename_finish]
-		mov	[obj_name_finish+ebx*4],eax
+		mov	[obj_name_finish+edx*4],eax
 
-		mov	[obj_instances+ebx*4],0	;reset instances
-
-.got:		mov	ebx,[obj_count]		;enter obj symbol
-		mov	eax,[.@file]
-		shl	eax,24
-		or	ebx,eax			;ebx[31:24] = file number, ebx[23:0] = obj index
+		mov	ebx,edx			;enter obj symbol
+		shl	ebx,24
+		or	ebx,[obj_count]		;ebx[31:24] = file number, ebx[23:0] = obj index
 		mov	al,type_obj
 		call	enter_symbol2_print
 
-		mov	ecx,[.@count]		;enter file number into index
-.index:	mov	eax,[obj_count]		;object limit exceeded?
-		cmp	eax,objs_limit
+		mov	ecx,[.@count]		;enter instances
+		mov	[obj_instances+edx*4],ecx
+
+.index:	mov	eax,[obj_count]		;enter file number into index
+		cmp	eax,objs_limit		;object limit exceeded?
 		je	error_loxoie
-		mov	eax,[.@file]
+		mov	eax,edx
 		call	enter_obj_long
 		mov	eax,0
 		call	enter_obj_long
 		inc	[obj_count]
 		loop	 .index
 
-		mov	eax,[.@count]		;accumulate instances
-		mov	ebx,[.@file]
-		add	[obj_instances+ebx*4],eax
 
-		call	get_end			;get end
+		mov	[obj_params+edx*4],0	;parameter list is empty by default
+
+		call	get_pipe_or_end		;any parameters?
+		jne	.noparams
+
+		mov	eax,param_limit		;get parameter base
+		mul	edx
+		mov	edx,eax
+
+.param:	mov	eax,[obj_files]		;check param limit
+		cmp	[obj_params+eax*4],param_limit
+		je	error_tmop
+
+		call	get_element		;get parameter name
+		cmp	[symbol_flag],1
+		jne	error_eas
+
+		mov	edi,edx			;enter symbol into parameter names
+		shl	edi,5			;multiply by 32 for parameter name size
+		add	edi,obj_param_names
+		lea	esi,[symbol]
+		mov	ecx,32
+	rep	movsb
+
+		call	get_equal		;get '='
+
+		call	get_value		;get type and value
+		mov	al,type_con
+		jnc	.notfloat
+		mov	al,type_con_float
+.notfloat:	mov	[obj_param_types+edx],al
+		mov	[obj_param_values+edx*4],ebx
+
+		inc	edx			;increment parameter index
+
+		mov	eax,[obj_files]		;increment parameter count
+		inc	[obj_params+eax*4]
+
+		call	get_comma_or_end	;another parameter?
+		je	.param
+.noparams:
+
+.objdone:	inc	[obj_files]		;inc obj file number
 
 		jmp		.nextline
 
@@ -3386,7 +3358,6 @@ compile_obj_blocks_id:
 
 		udataseg
 ddx		.@count
-ddx		.@file
 		codeseg
 ;
 ;
@@ -5162,7 +5133,7 @@ compile_dat:	mov	eax,[obj_ptr]		;save obj_ptr
 		or	ecx,ebx			;install relative address into s field
 		ret
 
-.trys_rel32:	or	ecx,1 shl 18		;.32-bit, set immediate bit
+.trys_rel32:	or	ecx,1 shl 18		;@@ 32-bit, set immediate bit
 		call	.tryvalueint	;get relative address
 		cmp	[.@pass],0		;if pass 0, don't qualify address
 		je		.trys_relx32
@@ -5568,9 +5539,9 @@ compile_sub_blocks:
 		sub	eax,[.@localvar]
 		test	eax,11b			;round up to long
 		jz		.rounded
-		or	eax,11b
-		inc	eax
-.rounded:	call	compile_rfvar
+		add	eax,4
+.rounded:	shr	eax,2
+		call	compile_rfvar
 
 		mov	eax,[.@sub]		;set number of results for method
 		shr	eax,20
@@ -5849,21 +5820,21 @@ determine_bauds_pins:
 		ret
 
 
-.@symlbaud:	db	'DOWNLOAD_BAUD',0
+.@symlbaud	db	'DOWNLOAD_BAUD',0
 
-.@sympin:	db	'DEBUG_PIN',0		;same purpose as debug_pin_tx
-.@sympintx:	db	'DEBUG_PIN_TX',0
-.@sympinrx:	db	'DEBUG_PIN_RX',0
-.@symdbaud:	db	'DEBUG_BAUD',0
+.@sympin	db	'DEBUG_PIN',0		;same purpose as debug_pin_tx
+.@sympintx	db	'DEBUG_PIN_TX',0
+.@sympinrx	db	'DEBUG_PIN_RX',0
+.@symdbaud	db	'DEBUG_BAUD',0
 
-.@symleft:	db	'DEBUG_LEFT',0
-.@symtop:	db	'DEBUG_TOP',0
-.@symwidth:	db	'DEBUG_WIDTH',0
-.@symheight:	db	'DEBUG_HEIGHT',0
-.@symdisleft:	db	'DEBUG_DISPLAY_LEFT',0
-.@symdistop:	db	'DEBUG_DISPLAY_TOP',0
-.@symlog:	db	'DEBUG_LOG_SIZE',0
-.@symoff:	db	'DEBUG_WINDOWS_OFF',0
+.@symleft	db	'DEBUG_LEFT',0
+.@symtop	db	'DEBUG_TOP',0
+.@symwidth	db	'DEBUG_WIDTH',0
+.@symheight	db	'DEBUG_HEIGHT',0
+.@symdisleft	db	'DEBUG_DISPLAY_LEFT',0
+.@symdistop	db	'DEBUG_DISPLAY_TOP',0
+.@symlog	db	'DEBUG_LOG_SIZE',0
+.@symoff	db	'DEBUG_WINDOWS_OFF',0
 ;
 ;
 ; Check for DEBUG-related symbol
@@ -5965,9 +5936,9 @@ insert_interpreter:
 .@var_longs	=	3Ch
 .@clkmode_hub	=	40h
 .@clkfreq_hub	=	44h
-.@_debugnop1_	=	0D30h
-.@_debugnop2_	=	0D34h
-.@_debugnop3_	=	0D38h
+.@_debugnop1_	=	0E4Ch
+.@_debugnop2_	=	0E50h
+.@_debugnop3_	=	0E54h
 
 interpreter:	file	"Spin2_interpreter.obj"
 interpreter_end:
@@ -6058,11 +6029,11 @@ insert_debugger:
 		ret
 
 
-.@symcogs:	db	'DEBUG_COGS',0
-.@symcoginit:	db	'DEBUG_COGINIT',0
-.@symmain:	db	'DEBUG_MAIN',0
-.@symdelay:	db	'DEBUG_DELAY',0
-.@symtimestamp:	db	'DEBUG_TIMESTAMP',0
+.@symcogs	db	'DEBUG_COGS',0
+.@symcoginit	db	'DEBUG_COGINIT',0
+.@symmain	db	'DEBUG_MAIN',0
+.@symdelay	db	'DEBUG_DELAY',0
+.@symtimestamp	db	'DEBUG_TIMESTAMP',0
 
 .@_clkfreq_	=	0D4h
 .@_clkmode1_	=	0D8h
@@ -7059,6 +7030,8 @@ get_element:	push	ecx
 		push	esi
 		push	edi
 
+		mov	[symbol_flag],0		;reset symbol flag
+
 		movzx	eax,[back_index]	;update back data
 		and	al,03h
 		mov	ebx,[source_ptr]
@@ -7114,6 +7087,19 @@ get_element:	push	ecx
 		cmp	al,'9'
 		jbe		.dec
 .notdec:
+		cmp	al,'.'			;continue on next line?
+		jne	.not3dot
+		cmp	byte [esi],'.'
+		jne	.not3dot
+		cmp	byte [esi+1],'.'
+		jne	.not3dot
+.skipline:	lodsb				;skip rest of line
+		cmp	al,0			;end of file?
+		je	.eof
+		cmp	al,13			;end of line?
+		jne	.skipline
+		jmp	.skip			;continue on next line
+.not3dot:
 		call	check_word_chr		;symbol?
 		mov	cl,symbol_limit+1
 		jnc		.sym2
@@ -7302,6 +7288,7 @@ get_element:	push	ecx
 .sym3:		dec	esi			;back up to non-symbol chr
 		mov	al,0			;terminate symbol
 		stosb
+		inc	[symbol_flag]		;set symbol flag
 		call	find_symbol		;find symbol
 
 .got:		call	.setptrs	;set pointers
@@ -7706,6 +7693,8 @@ ddx		column
 ;
 ; Elementizer data
 ;
+dbx		symbol_flag
+
 ddx		source_ptr
 dbx		source_flags
 
@@ -11684,8 +11673,11 @@ compile_term:	cmp	al,type_con		;constant integer?
 		jne	error_etmrasr
 		jmp	compile_flex
 .notflex:
-		cmp	al,type_at		;@"string", @obj{[]}.method, @method, @var ?
+		cmp	al,type_at		;@"string", @obj{[]}.method, @method, @hubvar ?
 		je	ct_at
+
+		cmp	al,type_upat		;^@var
+		je	ct_upat
 
 		cmp	al,type_inc		;++var ?
 		mov	dh,bc_var_preinc_push
@@ -12201,7 +12193,7 @@ compile_flex:	call	get_left		;get '('
 		jmp	enter_obj
 ;
 ;
-; Compile term - @"string", @obj{[]}.method, @method or @var
+; Compile term - @"string", @obj{[]}.method, @method, or @hubvar
 ;
 ct_at:		call	get_element		;get string, object, method, or variable
 		cmp	al,type_con
@@ -12249,7 +12241,7 @@ ct_at:		call	get_element		;get string, object, method, or variable
 		ret
 
 
-.object:	mov	edx,ebx			;obj{[]}.method, preserve obj data
+.object:	mov	edx,ebx			;@obj{[]}.method, preserve obj data
 		mov	edi,0			;reset index flag
 
 		call	check_index		;check for obj[]
@@ -12281,7 +12273,7 @@ ct_at:		call	get_element		;get string, object, method, or variable
 		jmp	compile_rfvar
 
 
-.method:	mov	al,bc_mptr_sub		;method, enter mptr bytecode
+.method:	mov	al,bc_mptr_sub		;@method, enter mptr bytecode
 		call	enter_obj
 
 		mov	eax,ebx			;compile rfvar index of method
@@ -12295,7 +12287,17 @@ ct_at:		call	get_element		;get string, object, method, or variable
 		test	ecx,var_bitfield_flag	;if @bitfield, error
 		jnz	error_ainafbf
 
-		mov	dh,bc_addr		;compile variable address
+		mov	dh,bc_get_addr		;compile variable address
+		jmp	compile_var_assign
+;
+;
+; Compile term - ^@var
+;
+ct_upat:	call	get_element		;get variable
+		call	check_variable
+		jne	error_eav
+
+		mov	dh,bc_get_field		;compile variable field
 		jmp	compile_var_assign
 ;
 ;
@@ -13452,10 +13454,17 @@ get_variable:	call	get_element
 ;	ecx.18    = bitfield flag
 ;	ecx.17    = index flag
 ;	ecx.16    = size override flag
-;	ch=type (type_register/type_loc_byte/type_var_byte/type_dat_byte/type_size)
+;	ch=type (type_register/type_loc_byte/type_var_byte/type_dat_byte/type_field/type_size)
 ;	cl=size (0=byte/default, 1=word in hub, 2=long in hub)
 ;	esi=address (reg/loc/var/dat/hub)
 ;	edi=ptr after variable (base/index/bitfield exp)
+;
+;
+;	field - type_field
+;	------------------
+;
+;	FIELD[memfield]
+;	FIELD[memfield][index]
 ;
 ;
 ;	register - type_register
@@ -13547,13 +13556,22 @@ check_variable:	push	eax
 		mov	esi,ebx
 		mov	edi,[source_ptr]
 .notreg:
+		cmp	al,type_field		;FIELD[memfield]?
+		jne	.notfield
+		mov	ch,type_field
+		call	skip_index
+		call	check_index		;check for [index]
+		jne	.isvar
+		or	ecx,var_index_flag
+		jmp	.isvar
+.notfield:
 		mov	ch,al			;other
 
 		cmp	al,type_register	;register?
 		je		.checkindex
 
-		cmp	al,type_size		;byte/word/long?
-		jne		.exit
+		cmp	al,type_size		;BYTE/WORD/LONG?
+		jne	.exit			;if not a variable, exit with z=0
 		mov	cl,bl
 		call	skip_index		;skip [base]
 		jmp		.checkindex
@@ -13593,7 +13611,7 @@ check_variable:	push	eax
 		and	ecx,not var_bitfield_con
 .bfrb:		call	get_rightb		;get ']'
 .nobf:
-		xor	eax,eax			;z=1
+.isvar:	xor	eax,eax			;z=1
 
 .exit:		pop	ebx
 		pop	eax
@@ -13638,6 +13656,17 @@ compile_var:	push	[source_ptr]
 		pop	[source_ptr]		;restore source_ptr
 .nobf:
 
+		cmp	ch,type_field		;FIELD[memfield]?
+		jne	.notfield
+		call	compile_index
+		test	ecx,var_index_flag	;index?
+		mov	al,bc_setup_field_p
+		jz	.entersetup
+		call	compile_index
+		mov	al,bc_setup_field_pi
+		jmp	.entersetup
+.notfield:
+
 		cmp	ch,type_register	;register?
 		jne		.notreg
 
@@ -13679,7 +13708,7 @@ compile_var:	push	[source_ptr]
 		jmp		.enterbit
 .notreg:
 
-		cmp	ch,type_size		;size byte/word/long?
+		cmp	ch,type_size		;size BYTE/WORD/LONG?
 		jne		.notsize
 		test	ecx,var_index_flag	;index?
 		mov	al,bc_setup_byte_pa	;without index
@@ -13801,7 +13830,7 @@ compile_var:	push	[source_ptr]
 		call	get_leftb		;get '['
 		test	ecx,var_bitfield_con	;constant bitfield?
 		jnz		.bfcon
-		mov	al,bc_setup_field_pop	;not constant bitfield, already compiled
+		mov	al,bc_setup_bfield_pop	;not constant bitfield, already compiled
 		call	skip_exp		;skip bitfield
 		call	check_dotdot
 		jne		.bitsetup
@@ -13824,12 +13853,12 @@ compile_var:	push	[source_ptr]
 .bitcompile:	cmp	eax,31
 		jbe		.bitcon031
 		push	eax			;>31, bitfield-rfvar
-		mov	al,bc_setup_field_rfvar
+		mov	al,bc_setup_bfield_rfvar
 		call	enter_obj
 		pop	eax
 		call	compile_rfvar
 		jmp		.bitrightb
-.bitcon031:	add	al,bc_setup_field_0_31	;bitfield-0..31
+.bitcon031:	add	al,bc_setup_bfield_0_31	;bitfield-0..31
 .bitsetup:	call	enter_obj
 .bitrightb:	call	get_rightb		;get ']'
 .nobit:
@@ -15462,7 +15491,7 @@ count	dd_key_cyan			;CYAN
 count	dd_key_red			;RED
 count	dd_key_magenta			;MAGENTA
 count	dd_key_yellow			;YELLOW
-count	dd_key_grey			;GREY
+count	dd_key_gray			;GRAY
 
 count	dd_key_lut1			;LUT1		color-mode group
 count	dd_key_lut2			;LUT2
@@ -15534,6 +15563,7 @@ count	dd_key_set			;SET
 count	dd_key_signed			;SIGNED
 count	dd_key_size			;SIZE
 count	dd_key_spacing			;SPACING
+count	dd_key_sparse			;SPARSE
 count	dd_key_sprite			;SPRITE
 count	dd_key_spritedef		;SPRITEDEF
 count	dd_key_text			;TEXT
@@ -15568,7 +15598,8 @@ debug_symbols:
 	sym	dd_key,	dd_key_red,			'RED'
 	sym	dd_key,	dd_key_magenta,			'MAGENTA'
 	sym	dd_key,	dd_key_yellow,			'YELLOW'
-	sym	dd_key,	dd_key_grey,			'GREY'
+	sym	dd_key,	dd_key_gray,			'GRAY'
+	sym	dd_key,	dd_key_gray,			'GREY'		;(allow both spellings)
 
 	sym	dd_key,	dd_key_lut1,			'LUT1'		;color-mode group
 	sym	dd_key,	dd_key_lut2,			'LUT2'
@@ -15640,6 +15671,7 @@ debug_symbols:
 	sym	dd_key,	dd_key_signed,			'SIGNED'
 	sym	dd_key,	dd_key_size,			'SIZE'
 	sym	dd_key,	dd_key_spacing,			'SPACING'
+	sym	dd_key,	dd_key_sparse,			'SPARSE'
 	sym	dd_key, dd_key_sprite,			'SPRITE'
 	sym	dd_key, dd_key_spritedef,		'SPRITEDEF'
 	sym	dd_key,	dd_key_text,			'TEXT'
@@ -15682,14 +15714,14 @@ ddx		debug_display_ptr
 ;
 reset_debug_symbols:
 
-		mov	edi,ddsymbols_hash_auto		;reset auto symbols
+		mov	edi,ddsymbols_hash_auto		;reset debug symbols
 		call	reset_hash_table
 
 		mov	[symbol_ptr],		ddsymbols_auto	;write auto symbols
 		mov	[symbol_ptr_limit],	ddsymbols_auto + ddsymbols_limit_auto - (1+32+1+4+1+4)
 		mov	[symbol_hash_ptr],	ddsymbols_hash_auto
 
-		lea	esi,[debug_symbols]			;enter auto symbols
+		lea	esi,[debug_symbols]			;enter debug symbols
 		call	enter_symbols
 
 		mov	edi,ddsymbols_hash_name		;reset name symbols
@@ -16107,6 +16139,9 @@ ddx		symbol_ptr			;these three must be set to the current symbol set
 ddx		symbol_ptr_limit
 ddx		symbol_hash_ptr
 
+ddx		symbols_hash_param,1000h	;parameter symbols
+dbx		symbols_param,symbols_limit_param
+ddx		symbols_ptr_param
 
 ddx		symbols_hash_auto,1000h		;auto symbols
 dbx		symbols_auto,symbols_limit_auto
@@ -16130,6 +16165,34 @@ ddx		symbol_exists_ptr
 dbx		symbol,symbol_limit+2		;+2 for obj.method extra byte and 0
 dbx		symbol2,symbol_limit+2
 		codeseg
+;
+;
+; Enter param symbols into hashed symbol table
+;
+enter_symbols_param:
+
+		call	reset_symbols_param
+		call	write_symbols_param
+		mov	edx,0
+
+.symbol:	cmp	edx,[params]
+		je	.done
+
+		mov	esi,edx
+		shl	esi,5
+		add	esi,param_names
+		lea	edi,[symbol2]
+		mov	ecx,32
+	rep	movsb
+
+		mov	al,[param_types+edx]
+		mov	ebx,[param_values+edx*4]
+		call	enter_symbol2
+
+		inc	edx
+		jmp	.symbol
+
+.done:		ret
 ;
 ;
 ; Enter auto symbols into hashed symbol table
@@ -16157,6 +16220,11 @@ enter_symbols:	call	hash_symbol		;hash symbol name to get length
 ;
 ; Reset auto/main/local/inline symbols
 ;
+reset_symbols_param:
+
+		mov	edi,symbols_hash_param
+		jmp	reset_hash_table
+
 reset_symbols_auto:
 
 		mov	edi,symbols_hash_auto
@@ -16187,6 +16255,13 @@ reset_hash_table:
 ;
 ; Write auto/main/local/inline symbols
 ;
+write_symbols_param:
+
+		mov	[symbol_ptr],symbols_param
+		mov	[symbol_ptr_limit],symbols_param + symbols_limit_param - (1+32+1+4+1+4)
+		mov	[symbol_hash_ptr],symbols_hash_param
+		ret
+
 write_symbols_auto:
 
 		mov	[symbol_ptr],		symbols_auto
@@ -16264,6 +16339,33 @@ enter_symbol2:	push	eax
 		pop	edx
 		pop	ecx
 		pop	eax
+		ret
+;
+;
+; Find symbol in param symbol table
+; symbol must hold name, terminated with 0
+; if found, eax=type and ebx=value
+; if not found, eax=0 (type_undefined) and ebx=0
+;
+find_param:	push	ecx
+		push	edx
+		push	esi
+		push	edi
+
+		lea	esi,[symbol]		;hash symbol, ecx=length, edx=hash index
+		call	hash_symbol
+
+		mov	ebx,symbols_hash_param		;search param symbols
+		call	check_symbol
+		jnc	.found
+
+		xor	eax,eax			;symbol not found
+		xor	ebx,ebx
+
+.found:	pop	edi
+		pop	esi
+		pop	edx
+		pop	ecx
 		ret
 ;
 ;
@@ -16458,6 +16560,7 @@ find_symbol_s3:	syms	'//+',	type_op,	oc_remu
 ; they get converted to LE byte-order numbers.
 find_symbol_s2:	syms	'=:',	type_assign,	0
 		syms	'@@',	type_atat,	0
+		syms	'@^',	type_upat,	0
 		syms	'..',	type_dotdot,	0
 		syms	'~~',	type_tiltil,	0
 		syms	'++',	type_inc,	0
@@ -16568,6 +16671,8 @@ automatic_symbols:
 	sym	type_block,		block_pri,	'PRI'
 	sym	type_block,		block_dat,	'DAT'
 	sym	type_block,		block_dev,	'DEV'
+
+	sym	type_field,		0,		'FIELD'		;field
 
 	sym	type_size,		0,		'BYTE'		;sizes
 	sym	type_size,		1,		'WORD'
@@ -16799,6 +16904,9 @@ automatic_symbols:
 
 	sym	type_i_flex,		fc_strsize,	'STRSIZE'
 	sym	type_i_flex,		fc_strcomp,	'STRCOMP'
+	sym	type_i_flex,		fc_strcopy,	'STRCOPY'
+
+	sym	type_i_flex,		fc_getcrc,	'GETCRC'
 
 	sym	type_i_flex,		fc_waitus,	'WAITUS'
 	sym	type_i_flex,		fc_waitms,	'WAITMS'
