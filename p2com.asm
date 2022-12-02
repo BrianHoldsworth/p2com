@@ -15,12 +15,9 @@
 ;
 ; Version 0.0	- Adapted from SXASM v1.01
 ;	  0.1	- Added Propeller II instructions
+;	  0.2	- Adapted from TASM32 to fasm
 ;
-			ideal
-			p386
-			model	flat
-			%CREFUREF
-;
+include '%PLATFORM%.asm'
 ;
 ; Public routines
 ;
@@ -78,6 +75,16 @@ inline_locals		=	1E0h
 debug_size_limit	=	2A00h
 
 clkfreq_address		=	044h
+;
+;
+; Simple conversion TASM->FASM macro syntax
+macro tmacro [params]
+     {
+      common macro params {
+     }
+
+    macro fix tmacro
+    endm fix }
 ;
 ;
 ; Macro for assigning ascending values
@@ -194,8 +201,8 @@ count		pp_popb		;	POPB	D	-->	RDLONG	D,--PTRB
 ;
 ; Assembly codes
 ;
-macro		asmcode	symbol,v1,v2,v3
-symbol		=	(v3 shl 11) + (v2 shl 9) + v1
+macro		asmcode	label_m,v1,v2,v3
+label_m		=	(v3 shl 11) + (v2 shl 9) + v1
 		endm
 
 asmcode		ac_ror,		000000000b,11b,operand_ds	;	ROR	D,S/#
@@ -1113,8 +1120,8 @@ flex_results_shift	=	3
 flex_pinfld		=	40h
 flex_hubcode		=	80h
 
-macro		flexcode	symbol,bytecode,params,results,pinfld,hubcode
-symbol		=		bytecode + (params shl 8) + (results shl 11) + (pinfld shl 14) + (hubcode shl 15)
+macro		flexcode	label_m,bytecode,params,results,pinfld,hubcode
+label_m		=		bytecode + (params shl 8) + (results shl 11) + (pinfld shl 14) + (hubcode shl 15)
 		endm
 
 ;		flexcode	bytecode	params	results	pinfld	hubcode
@@ -1286,8 +1293,8 @@ count		op_ternary	;	? (:)		ternary		14	-
 ternary_precedence	=	14
 
 
-macro		opcode	symbol,v1,v2,v3,v4,v5,v6,v7,v8,v9,v10
-symbol		=	v1 + (v2 shl 8) + (v3 shl 16) + (v4 shl 24) + (v5 shl 25) + (v6 shl 26) + (v7 shl 27) + (v8 shl 28) + (v9 shl 29) + (v10 shl 30)
+macro		opcode	label_m,v1,v2,v3,v4,v5,v6,v7,v8,v9,v10
+label_m		=	v1 + (v2 shl 8) + (v3 shl 16) + (v4 shl 24) + (v5 shl 25) + (v6 shl 26) + (v7 shl 27) + (v8 shl 28) + (v9 shl 29) + (v10 shl 30)
 		endm
 
 opc_ternary	=	1 shl 24
@@ -1426,14 +1433,8 @@ count		info_pri			;data0/1 = obj start/finish, data2/3 = name start/finish
 ;
 ; dbx		symbol(,count)
 ;
-macro		dbx	symbol,count
-		udataseg
-		ifb	<count>
-symbol		db	?
-		else
-symbol		db	count dup (?)
-		endif
-		codeseg
+macro		dbx	label_m,count:1
+label_m		rb	count
 		endm
 ;
 ;
@@ -1441,14 +1442,8 @@ symbol		db	count dup (?)
 ;
 ; dwx		symbol(,count)
 ;
-macro		dwx	symbol,count
-		udataseg
-		ifb	<count>
-symbol		dw	?
-		else
-symbol		dw	count dup (?)
-		endif
-		codeseg
+macro		dwx	label_m,count:1
+label_m		rw	count
 		endm
 ;
 ;
@@ -1456,14 +1451,8 @@ symbol		dw	count dup (?)
 ;
 ; ddx		symbol(,count)
 ;
-macro		ddx	symbol,count
-		udataseg
-		ifb	<count>
-symbol		dd	?
-		else
-symbol		dd	count dup (?)
-		endif
-		codeseg
+macro		ddx	label_m,count:1
+label_m		rd	count
 		endm
 ;
 ;
@@ -1478,7 +1467,7 @@ symbol		dd	count dup (?)
 ;*  function P2InitStruct: pointer;					*
 ;************************************************************************
 ;
-		proc	P2InitStruct
+P2InitStruct:
 
 		cld
 		push	ebx
@@ -1498,71 +1487,73 @@ symbol		dd	count dup (?)
 		pop	ebx
 		ret
 
-		endp	P2InitStruct
+		;endp	P2InitStruct
 ;
 ;
 ; Data structure
 ;
-dbx		error						;error boolean
-ddx		error_msg					;error message pointer
+		udataseg
 
-dbx		pasm_mode					;pasm mode
-dbx		debug_mode					;debug mode
+dbx		error					;error boolean
+ddx		error_msg				;error message pointer
 
-ddx		source						;source pointer
-ddx		source_start					;source error start
-ddx		source_finish					;source error finish
+dbx		pasm_mode				;pasm mode
+dbx		debug_mode				;debug mode
 
-ddx		list						;list pointer (limit and length follow)
-ddx		list_limit					;list limit
-ddx		list_length					;list length
+ddx		source					;source pointer
+ddx		source_start				;source error start
+ddx		source_finish				;source error finish
 
-ddx		doc						;doc pointer (limit and length follow)
-ddx		doc_limit					;doc limit
-ddx		doc_length					;doc length
+ddx		list					;list pointer (limit and length follow)
+ddx		list_limit				;list limit
+ddx		list_length				;list length
+
+ddx		doc					;doc pointer (limit and length follow)
+ddx		doc_limit				;doc limit
+ddx		doc_length				;doc length
 
 ddx		params						;object parameters
 dbx		param_names,param_limit*32			;object parameter names
 dbx		param_types,param_limit				;object parameter types
 ddx		param_values,param_limit			;object parameter values
 
-dbx		obj,obj_limit					;object buffer
-ddx		obj_ptr						;object length
+dbx		obj,obj_limit				;object buffer
+ddx		obj_ptr					;object length
 
-ddx		obj_files					;object file count
-dbx		obj_filenames,file_limit*256			;object filenames
-ddx		obj_name_start,file_limit			;object filenames source start
-ddx		obj_name_finish,file_limit			;object filenames source finish
+ddx		obj_files				;object file count
+dbx		obj_filenames,file_limit*256		;object filenames
+ddx		obj_name_start,file_limit		;object filenames source start
+ddx		obj_name_finish,file_limit		;object filenames source finish
 ddx		obj_params,file_limit				;object parameters
 dbx		obj_param_names,file_limit*param_limit*32	;object parameter names
 dbx		obj_param_types,file_limit*param_limit		;object parameter types
 ddx		obj_param_values,file_limit*param_limit		;object parameter values
-ddx		obj_offsets,file_limit				;object offsets
-ddx		obj_lengths,file_limit				;object lengths
-dbx		obj_data,obj_limit				;object data
-ddx		obj_instances,file_limit			;object instances
-dbx		obj_title,256					;object title
+ddx		obj_offsets,file_limit			;object offsets
+ddx		obj_lengths,file_limit			;object lengths
+dbx		obj_data,obj_limit			;object data
+ddx		obj_instances,file_limit		;object instances
+dbx		obj_title,256				;object title
 
-ddx		dat_files					;data file count
-dbx		dat_filenames,file_limit*256			;data filenames
-ddx		dat_name_start,file_limit			;data filenames source start
-ddx		dat_name_finish,file_limit			;data filenames source finish
-ddx		dat_offsets,file_limit				;data offsets
-ddx		dat_lengths,file_limit				;data lengths
-dbx		dat_data,obj_limit				;data data
+ddx		dat_files				;data file count
+dbx		dat_filenames,file_limit*256		;data filenames
+ddx		dat_name_start,file_limit		;data filenames source start
+ddx		dat_name_finish,file_limit		;data filenames source finish
+ddx		dat_offsets,file_limit			;data offsets
+ddx		dat_lengths,file_limit			;data lengths
+dbx		dat_data,obj_limit			;data data
 
-ddx		info_count					;info count
-ddx		info_start,info_limit				;info source start
-ddx		info_finish,info_limit				;info source finish
-ddx		info_type,info_limit				;info type
-ddx		info_data0,info_limit				;info data0
-ddx		info_data1,info_limit				;info data1
-ddx		info_data2,info_limit				;info data2
-ddx		info_data3,info_limit				;info data3
+ddx		info_count				;info count
+ddx		info_start,info_limit			;info source start
+ddx		info_finish,info_limit			;info source finish
+ddx		info_type,info_limit			;info type
+ddx		info_data0,info_limit			;info data0
+ddx		info_data1,info_limit			;info data1
+ddx		info_data2,info_limit			;info data2
+ddx		info_data3,info_limit			;info data3
 
-ddx		download_baud					;download baud
+ddx		download_baud				;download baud
 
-dbx		debug_pin_tx					;debug settings
+dbx		debug_pin_tx				;debug settings
 dbx		debug_pin_rx
 ddx		debug_baud
 ddx		debug_left
@@ -1574,38 +1565,40 @@ ddx		debug_display_top
 ddx		debug_log_size
 ddx		debug_windows_off
 
-dbx		debug_data,debug_data_limit			;debug buffer
+dbx		debug_data,debug_data_limit		;debug buffer
 
-ddx		debug_display_ena				;debug display
+ddx		debug_display_ena			;debug display
 ddx		debug_display_new
 dbx		debug_display_string,debug_string_limit
 dbx		debug_display_type,debug_display_limit
 ddx		debug_display_value,debug_display_limit
 dbx		debug_display_targs
 
-ddx		disassembler_inst				;disassembler
+ddx		disassembler_inst			;disassembler
 ddx		disassembler_addr
 dbx		disassembler_string,256
 
-ddx		distilled_bytes					;distilled bytes
+ddx		distilled_bytes				;distilled bytes
 
-ddx		clkmode						;clock mode
-ddx		clkfreq						;clock frequency
-ddx		xinfreq						;xin frequency
+ddx		clkmode					;clock mode
+ddx		clkfreq					;clock frequency
+ddx		xinfreq					;xin frequency
 
-ddx		size_flash_loader				;size of flash loader
-ddx		size_interpreter				;size of interpreter
-ddx		size_obj					;size of object
-ddx		size_var					;size of var
+ddx		size_flash_loader			;size of flash loader
+ddx		size_interpreter			;size of interpreter
+ddx		size_obj				;size of object
+ddx		size_var				;size of var
 
-ddx		obj_stack_ptr					;recursion level
+ddx		obj_stack_ptr				;recursion level
+
+		codeseg
 ;
 ;
 ;************************************************************************
 ;*  procedure P2Compile1;						*
 ;************************************************************************
 ;
-		proc	P2Compile1
+P2Compile1:
 
 		cld
 		push	ebx
@@ -1621,14 +1614,14 @@ ddx		obj_stack_ptr					;recursion level
 		pop	ebx
 		ret
 
-		endp	P2Compile1
+		;endp	P2Compile1
 ;
 ;
 ;************************************************************************
 ;*  procedure P2Compile2;						*
 ;************************************************************************
 ;
-		proc	P2Compile2
+P2Compile2:
 
 		cld
 		push	ebx
@@ -1644,14 +1637,14 @@ ddx		obj_stack_ptr					;recursion level
 		pop	ebx
 		ret
 
-		endp	P2Compile2
+		;endp	P2Compile2
 ;
 ;
 ;************************************************************************
 ;*  procedure P2InsertInterpreter;					*
 ;************************************************************************
 ;
-		proc	P2InsertInterpreter
+P2InsertInterpreter:
 
 		cld
 		push	ebx
@@ -1667,14 +1660,14 @@ ddx		obj_stack_ptr					;recursion level
 		pop	ebx
 		ret
 
-		endp	P2InsertInterpreter
+		;endp	P2InsertInterpreter
 ;
 ;
 ;************************************************************************
 ;*  procedure P2InsertDebugger;						*
 ;************************************************************************
 ;
-		proc	P2InsertDebugger
+P2InsertDebugger:
 
 		cld
 		push	ebx
@@ -1690,14 +1683,14 @@ ddx		obj_stack_ptr					;recursion level
 		pop	ebx
 		ret
 
-		endp	P2InsertDebugger
+		;endp	P2InsertDebugger
 ;
 ;
 ;************************************************************************
 ;*  procedure P2InsertFlashLoader;					*
 ;************************************************************************
 ;
-		proc	P2InsertFlashLoader
+P2InsertFlashLoader:
 
 		cld
 		push	ebx
@@ -1713,14 +1706,14 @@ ddx		obj_stack_ptr					;recursion level
 		pop	ebx
 		ret
 
-		endp	P2InsertFlashLoader
+		;endp	P2InsertFlashLoader
 ;
 ;
 ;************************************************************************
 ;*  procedure P2InsertClockSetter;					*
 ;************************************************************************
 ;
-		proc	P2InsertClockSetter
+P2InsertClockSetter:
 
 		cld
 		push	ebx
@@ -1736,14 +1729,14 @@ ddx		obj_stack_ptr					;recursion level
 		pop	ebx
 		ret
 
-		endp	P2InsertClockSetter
+		;endp	P2InsertClockSetter
 ;
 ;
 ;************************************************************************
 ;*  procedure P2ResetDebugSymbols;					*
 ;************************************************************************
 ;
-		proc	P2ResetDebugSymbols
+P2ResetDebugSymbols:
 
 		cld
 		push	ebx
@@ -1759,14 +1752,14 @@ ddx		obj_stack_ptr					;recursion level
 		pop	ebx
 		ret
 
-		endp	P2ResetDebugSymbols
+		;endp	P2ResetDebugSymbols
 ;
 ;
 ;************************************************************************
 ;*  procedure P2ParseDebugString;					*
 ;************************************************************************
 ;
-		proc	P2ParseDebugString
+P2ParseDebugString:
 
 		cld
 		push	ebx
@@ -1782,14 +1775,14 @@ ddx		obj_stack_ptr					;recursion level
 		pop	ebx
 		ret
 
-		endp	P2ParseDebugString
+		;endp	P2ParseDebugString
 ;
 ;
 ;************************************************************************
 ;*  procedure P2Disassemble;						*
 ;************************************************************************
 ;
-		proc	P2Disassemble
+P2Disassemble:
 
 		cld
 		push	ebx
@@ -1805,7 +1798,7 @@ ddx		obj_stack_ptr					;recursion level
 		pop	ebx
 		ret
 
-		endp	P2Disassemble
+		;endp	P2Disassemble
 ;
 ;
 ;************************************************************************
@@ -2382,9 +2375,10 @@ abort:		mov	esp,[esp_save]		;restore stack pointer
 
 		ret				;return to compiler caller
 
-
+		udataseg
 ddx		esp_save			;stack pointer for abort
-;
+		codeseg
+;		
 ;
 ;************************************************************************
 ;*  Compiler								*
@@ -2574,6 +2568,7 @@ compile_done:	mov	[source_start],0	;reset source pointers
 ;
 ; Data
 ;
+		udataseg
 ddx		var_ptr
 
 ddx		obj_count
@@ -2588,6 +2583,7 @@ ddx		pubcon_list_size
 
 dbx		doc_flag
 dbx		doc_mode
+		codeseg
 ;
 ;
 ;************************************************************************
@@ -2614,16 +2610,16 @@ print_obj:	call	print_string		;print clk settings
 
 
 		cmp	[pasm_mode],1		;spin or pasm?
-		je	@@pasm
+		je	.pasm
 
 		mov	eax,[distilled_bytes]
 		or	eax,eax
-		jz	@@nodistill
+		jz	.nodistill
 		call	print_string
 		db	13,'Redundant OBJ bytes removed: ',0
 		call	print_decimal
 		call	print_cr
-@@nodistill:
+.nodistill:
 		call	print_string		;print obj size
 		db	13,'OBJ bytes: ',0
 		mov	eax,[obj_ptr]
@@ -2632,56 +2628,56 @@ print_obj:	call	print_string		;print clk settings
 		db	13,'VAR bytes: ',0
 		mov	eax,[var_ptr]
 		call	print_decimal
-		jmp	@@notpasm
+		jmp	.notpasm
 
-@@pasm:		call	print_string		;print hub bytes
+.pasm:		call	print_string		;print hub bytes
 		db	13,'Hub bytes: ',0
 		mov	eax,[obj_ptr]
 		call	print_decimal
-@@notpasm:
+.notpasm:
 
 		call	print_cr
 		call	print_cr
 
 		xor	ebx,ebx			;print obj lines
 		mov	edx,[obj_ptr]
-@@objnext:	cmp	ebx,edx
-		je	@@objdone
+.objnext:	cmp	ebx,edx
+		je	.objdone
 		mov	eax,edx
 		sub	eax,ebx
 		mov	ecx,16
 		cmp	eax,ecx
-		jae	@@objsize
+		jae	.objsize
 		mov	ecx,eax
-@@objsize:	lea	esi,[obj]
-		call	@@listline
-		jmp	@@objnext
-@@objdone:
+.objsize:	lea	esi,[obj]
+		call	.listline
+		jmp	.objnext
+.objdone:
 
 		cmp	[debug_mode],0		;debug data?
-		je	@@debugdone
+		je	.debugdone
 
 		call	print_string		;print debug header
 		db	13,13,'DEBUG data',13,13,0
 
 		xor	ebx,ebx			;print debug data lines
-		movzx	edx,[word debug_data]
-@@debugnext:	cmp	ebx,edx
-		je	@@debugdone
+		movzx	edx,word [debug_data]
+.debugnext:	cmp	ebx,edx
+		je	.debugdone
 		mov	eax,edx
 		sub	eax,ebx
 		mov	ecx,16
 		cmp	eax,ecx
-		jae	@@debugsize
+		jae	.debugsize
 		mov	ecx,eax
-@@debugsize:	lea	esi,[debug_data]
-		call	@@listline
-		jmp	@@debugnext
-@@debugdone:
+.debugsize:	lea	esi,[debug_data]
+		call	.listline
+		jmp	.debugnext
+.debugdone:
 		ret
 
 
-@@listline:	mov	eax,ebx			;print obj line with ascii
+.listline:	mov	eax,ebx			;print obj line with ascii
 		call	print_word5
 		mov	al,'-'
 		call	print_chr
@@ -2689,12 +2685,12 @@ print_obj:	call	print_string		;print clk settings
 		push	ebx
 		push	ecx
 
-@@hex:		mov	al,' '
+.hex:		mov	al,' '
 		call	print_chr
 		mov	al,[esi+ebx]
 		call	print_byte
 		inc	ebx
-		loop	@@hex
+		loop	.hex
 
 		pop	ecx
 		push	ecx
@@ -2702,9 +2698,9 @@ print_obj:	call	print_string		;print clk settings
 		neg	ecx
 		add	ecx,16
 		inc	ecx
-@@spaces:	call	print_string
+.spaces:	call	print_string
 		db	'   ',0
-		loop	@@spaces
+		loop	.spaces
 
 		pop	ecx
 		pop	ebx
@@ -2712,15 +2708,15 @@ print_obj:	call	print_string		;print clk settings
 		mov	al,27h
 		call	print_chr
 
-@@ascii:	mov	al,[esi+ebx]
+.ascii:	mov	al,[esi+ebx]
 		cmp	al,' '
-		jb	@@notascii
+		jb	.notascii
 		cmp	al,7Fh
-		jb	@@isascii
-@@notascii:	mov	al,'.'
-@@isascii:	call	print_chr
+		jb	.isascii
+.notascii:	mov	al,'.'
+.isascii:	call	print_chr
 		inc	ebx
-		loop	@@ascii
+		loop	.ascii
 
 		mov	al,27h
 		call	print_chr
@@ -2738,21 +2734,21 @@ print_symbol2:	push	eax
 		db	'TYPE: ',0
 
 		cmp	al,type_con
-		jb	@@notlist
+		jb	.notlist
 		cmp	al,type_method
-		ja	@@notlist
+		ja	.notlist
 		sub	al,type_con
-		mov	ah,@@list2-@@list
+		mov	ah,.@list2-.@list
 		mul	ah
 		movzx	eax,ax
-		lea	esi,[@@list+eax]
+		lea	esi,[.@list+eax]
 		call	print_string_esi
-		jmp	@@typedone	
-@@notlist:
+		jmp	.typedone
+.notlist:
 		call	print_byte
 		call	print_string
 		db	'           ',0
-@@typedone:
+.typedone:
 		call	print_string
 		db	'   VALUE: ',0
 		mov	eax,ebx
@@ -2771,8 +2767,8 @@ print_symbol2:	push	eax
 		ret
 
 
-@@list:		db	'CON          ',0
-@@list2:	db	'CON_FLOAT    ',0
+.@list		db	'CON          ',0
+.@list2		db	'CON_FLOAT    ',0
 		db	'REG          ',0
 		db	'LOC_BYTE     ',0
 		db	'LOC_WORD     ',0
@@ -2814,9 +2810,9 @@ print_hex:	rol	eax,4			;print hex value
 		and	al,0Fh			;convert nibble in al to hex
 		add	al,'0'
 		cmp	al,'9'
-		jbe	@@got
+		jbe	.got
 		add	al,7
-@@got:		call	print_chr
+.got:		call	print_chr
 		pop	eax
 		loop	print_hex
 
@@ -2832,31 +2828,31 @@ print_decimal:	push	ebx
 
 		xor	ebx,ebx			;reset leading-space flag
 		mov	ecx,9			;ready for 9 digits
-@@digit:	xor	edx,edx			;get digit
-		div	[dword @@tens-4+ecx*4]
+.digit:	xor	edx,edx			;get digit
+		div	dword [.@tens-4+ecx*4]
 		or	eax,eax			;if leading zero, print space
-		jnz	@@print
+		jnz	.print
 		or	ebx,ebx
-		jnz	@@print
+		jnz	.print
 		cmp	cl,1
-		je	@@print
+		je	.print
 		mov	al,' '
-		jmp	@@space
-@@print:	inc	ebx			;else, set flag and print digit
+		jmp	.space
+.print:	inc	ebx			;else, set flag and print digit
 		or	al,'0'
-@@space:	call	print_chr
+.space:	call	print_chr
 		cmp	cl,4			;comma position?
-		je	@@comma
+		je	.comma
 		cmp	cl,7
-		je	@@comma
+		je	.comma
 		cmp	cl,10			;comma position?
-		jne	@@notcomma
-@@comma:	or	ebx,ebx			;yes, if no digit printed, print space
-		jz	@@space2
+		jne	.notcomma
+.comma:	or	ebx,ebx			;yes, if no digit printed, print space
+		jz		.space2
 		mov	al,','			;else, print comma
-@@space2:	call	print_chr
-@@notcomma:	mov	eax,edx
-		loop	@@digit
+.space2:	call	print_chr
+.notcomma:	mov	eax,edx
+		loop	 .digit
 
 		pop	edx
 		pop	ecx
@@ -2864,7 +2860,7 @@ print_decimal:	push	ebx
 		ret
 
 
-@@tens		dd	1,10,100,1000,10000,100000,1000000,10000000,100000000,1000000000
+.@tens		dd	1,10,100,1000,10000,100000,1000000,10000000,100000000,1000000000
 ;
 ;
 ; Print string at esi
@@ -2873,37 +2869,38 @@ print_string_esi:
 
 		push	eax
 
-@@loop:		lodsb
+.loop:		lodsb
 		cmp	al,0
-		je	@@done
+		je		.done
 		call	print_chr
-		jmp	@@loop
-@@done:
+		jmp		.loop
+.done:
 		pop	eax
 		ret
 ;
 ; Print string after call
 ; zero-terminated string must follow call
 ;
-print_string:	mov	[@@temp],esi
+print_string:	mov	[.@temp],esi
 
 		pop	esi
 		push	eax
 
-@@loop:		lodsb
+.loop:		lodsb
 		cmp	al,0
-		je	@@done
+		je		.done
 		call	print_chr
-		jmp	@@loop
+		jmp		.loop
 
-@@done:		pop	eax
+.done:		pop	eax
 		push	esi
 
-		mov	esi,[@@temp]
+		mov	esi,[.@temp]
 		ret
 
-
-ddx		@@temp
+		udataseg
+ddx		.@temp
+		codeseg
 ;
 ;
 ; Print al
@@ -2939,9 +2936,11 @@ set_print:	lea	edi,[print]		;set pointer/limit/length
 ;
 ; Print data
 ;
+		udataseg
 ddx		print
 ddx		print_limit
 ddx		print_length
+		codeseg
 ;
 ;
 ;************************************************************************
@@ -2955,11 +2954,11 @@ enter_info:	push	ebx
 
 		mov	ebx,[info_count]	;get count and increment
 		cmp	ebx,info_limit
-		jne	@@ok
+		jne	.ok
 		dec	ebx
-		jmp	@@limit
-@@ok:		inc	[info_count]
-@@limit:
+		jmp	.limit
+.ok:		inc	[info_count]
+.limit:
 		push	[inf_start]		;enter start
 		pop	[info_start+ebx*4]
 		push	[inf_finish]		;enter finish
@@ -2979,6 +2978,7 @@ enter_info:	push	ebx
 		ret
 
 
+		udataseg
 ddx		inf_start
 ddx		inf_finish
 ddx		inf_type
@@ -2986,6 +2986,7 @@ ddx		inf_data0
 ddx		inf_data1
 ddx		inf_data2
 ddx		inf_data3
+		codeseg
 ;
 ;
 ;************************************************************************
@@ -3000,27 +3001,27 @@ determine_mode:	call	reset_element
 
 		mov	cl,0			;reset DAT block flag
 
-@@scan:		call	get_element		;get element
-		jc	@@done			;if eof, cl holds mode
+.scan:		call	get_element		;get element
+		jc	.done			;if eof, cl holds mode
 
 		cmp	al,type_block		;if not type_block, ignore
-		jne	@@scan
+		jne	.scan
 
 		cmp	bl,block_con		;if CON, ignore
-		je	@@scan
+		je	.scan
 
 		cmp	bl,block_dev		;if DEV, ignore
-		je	@@scan
+		je	.scan
 
 		cmp	bl,block_dat		;if not DAT, must be OBJ/VAR/PUB/PRI, set Spin mode
-		jne	@@spin
+		jne	.spin
 
 		mov	cl,1			;DAT, set flag and continue
-		jmp	@@scan
+		jmp	.scan
 
 
-@@spin:		mov	cl,0			;Spin mode
-@@done:		mov	[pasm_mode],cl		;Spin or PASM mode (DAT and no OBJ/VAR/PUB/PRI)
+.spin:		mov	cl,0			;Spin mode
+.done:		mov	[pasm_mode],cl		;Spin or PASM mode (DAT and no OBJ/VAR/PUB/PRI)
 
 		ret
 
@@ -3030,100 +3031,100 @@ determine_mode:	call	reset_element
 ;
 compile_con_blocks:
 
-		mov	[@@pass],0		;set pass
+		mov	[.@pass],0		;set pass
 
-@@nextpass:	call	reset_element		;reset element
-		jmp	@@autoblock
+.nextpass:	call	reset_element		;reset element
+		jmp		.autoblock
 
-@@nextblock:	mov	dl,block_con		;scan for con block
+.nextblock:	mov	dl,block_con		;scan for con block
 		call	next_block
 
-@@autoblock:	mov	[@@enum_valid],1	;reset enumeration
-		mov	[@@enum_value],0
-		mov	[@@enum_step],1
+.autoblock:	mov	[.@enum_valid],1	;reset enumeration
+		mov	[.@enum_value],0
+		mov	[.@enum_step],1
 
-@@nextline:	call	get_element		;get element, check for eof/end
-		jc	@@done
+.nextline:	call	get_element		;get element, check for eof/end
+		jc		.done
 		cmp	al,type_end
-		je	@@nextline
+		je		.nextline
 
-@@sameline:	mov	[@@assign_flag],1	;set assign flag
+.sameline:	mov	[.@assign_flag],1	;set assign flag
 
 		cmp	al,type_con		;check for integer constant
-		je	@@constant
+		je		.constant
 		cmp	al,type_con_float	;check for float constant
-		je	@@constant
+		je		.constant
 		cmp	al,type_undefined	;check for undefined
-		je	@@symbol
+		je		.symbol
 		cmp	al,type_pound		;check for '#'
-		je	@@pound
+		je		.pound
 
 		cmp	al,type_block		;block?
 		jne	error_eaucnop
 		call	back_element		;yes, back up
-		jmp	@@nextblock		;resume scan for next con block
+		jmp	.nextblock	;resume scan for next con block
 
 
-@@constant:	cmp	[@@pass],0		;constant
+.constant:	cmp	[.@pass],0		;constant
 		je	error_eaucnop		;if first pass, error
-		mov	[@@assign_flag],0	;second pass, clear assign flag
-		mov	[@@assign_type],al	;save assign type and value for verification
-		mov	[@@assign_value],ebx
+		mov	[.@assign_flag],0	;second pass, clear assign flag
+		mov	[.@assign_type],al	;save assign type and value for verification
+		mov	[.@assign_value],ebx
 
 
-@@symbol:	push	[source_start]		;symbol, set info source ptrs
+.symbol:	push	[source_start]		;symbol, set info source ptrs
 		pop	[inf_start]
 		push	[source_finish]
 		pop	[inf_finish]
 
 		call	backup_symbol		;backup constant name
 
-		mov	[@@float],0		;reset float flag
+		mov	[.@float],0		;reset float flag
 
 		call	get_element		;get '=', '[', ',', or end
 		cmp	al,type_equal
-		je	@@equal
+		je		.equal
 		cmp	al,type_leftb
-		je	@@enumx
+		je		.enumx
 		cmp	al,type_comma
-		je	@@enuma
+		je		.enuma
 		cmp	al,type_end
-		je	@@enuma
+		je		.enuma
 		jmp	error_eelcoeol
 
-@@equal:	mov	bl,[@@pass]		;symbol = value
+.equal:	mov	bl,[.@pass]		;symbol = value
 		xor	bl,1			;if first pass, try to resolve
 		call	try_value		;if second pass, must resolve
-		rcl	[@@float],1		;if float, set flag to 1
+		rcl	[.@float],1		;if float, set flag to 1
 		test	[exp_flags],100b	;resolved?
-		jz	@@assign		;if resolved, assign value
-		jmp	@@next			;unresolved, next
+		jz	.assign	;if resolved, assign value
+		jmp	.next		;unresolved, next
 
-@@enumx:	call	@@tryvalueint		;symbol[value], assign enumeration
+.enumx:	call	.tryvalueint	;symbol[value], assign enumeration
 		call	get_rightb
 		test	[exp_flags],100b
-		jz	@@enumv
-		mov	[@@enum_valid],0
-		jmp	@@next
+		jz		.enumv
+		mov	[.@enum_valid],0
+		jmp		.next
 
-@@enuma:	call	back_element		;symbol, assign enumeration
+.enuma:	call	back_element		;symbol, assign enumeration
 		mov	ebx,1
-@@enumv:	cmp	[@@enum_valid],0	;if enumeration invalid, next
-		je	@@next
+.enumv:	cmp	[.@enum_valid],0	;if enumeration invalid, next
+		je		.next
 		mov	eax,ebx			;get enumeration value and update
-		mul	[@@enum_step]
+		mul	[.@enum_step]
 		mov	ebx,eax
-		xchg	[@@enum_value],ebx
-		add	[@@enum_value],ebx
+		xchg	[.@enum_value],ebx
+		add	[.@enum_value],ebx
 
 
-@@assign:	call	@@checkparam		;if symbol is a parameter, substitute the parameter value
+.assign:	call	.checkparam		;if symbol is a parameter, substitute the parameter value
 
-		cmp	[@@assign_flag],0	;if assign flag clear, verify assign type and value
-		je	@@verify
+		cmp	[.@assign_flag],0	;if assign flag clear, verify assign type and value
+		je		.verify
 
 		mov	al,info_con		;assign, set info
-		add	al,[@@float]
+		add	al,[.@float]
 		movzx	eax,al
 		mov	[inf_type],eax
 		mov	[inf_data0],ebx
@@ -3131,7 +3132,7 @@ compile_con_blocks:
 
 		call	pubcon_symbol2		;enter constant symbol into pub/con list
 		mov	al,results_limit+1	;enter 16/17 to denote constant integer/float
-		add	al,[@@float]
+		add	al,[.@float]
 		call	pubcon_byte		;enter long value
 		mov	eax,ebx
 		call	pubcon_byte
@@ -3143,86 +3144,87 @@ compile_con_blocks:
 		call	pubcon_byte
 
 		mov	al,type_con		;enter constant symbol
-		add	al,[@@float]		;integer or float?
+		add	al,[.@float]		;integer or float?
 		call	enter_symbol2_print
-		jmp	@@next
+		jmp		.next
 
-@@verify:	push	[inf_start]		;verify assign value and type (second pass)
+.verify:	push	[inf_start]		;verify assign value and type (second pass)
 		pop	[source_start]
 		push	[inf_finish]
 		pop	[source_finish]
 		mov	al,type_con
-		add	al,[@@float]
-		cmp	[@@assign_type],al
+		add	al,[.@float]
+		cmp	[.@assign_type],al
 		jne	error_siad
-		cmp	[@@assign_value],ebx
+		cmp	[.@assign_value],ebx
 		jne	error_siad
-		jmp	@@next
+		jmp		.next
 
 
-@@pound:	call	@@tryvalueint		;#value, set enumeration
-		mov	[@@enum_valid],0
-		jnz	@@poundleftb
-		mov	[@@enum_valid],1
-		mov	[@@enum_value],ebx
-		mov	[@@enum_step],1
-@@poundleftb:	call	check_leftb		;check for [step]
-		jne	@@next
-		call	@@tryvalueint
-		mov	[@@enum_step],ebx
-		jz	@@poundrightb
-		mov	[@@enum_valid],0
-@@poundrightb:	call	get_rightb
+.pound:	call	.tryvalueint	;#value, set enumeration
+		mov	[.@enum_valid],0
+		jnz		.poundleftb
+		mov	[.@enum_valid],1
+		mov	[.@enum_value],ebx
+		mov	[.@enum_step],1
+.poundleftb:	call	check_leftb		;check for [step]
+		jne		.next
+		call		.tryvalueint
+		mov	[.@enum_step],ebx
+		jz		.poundrightb
+		mov	[.@enum_valid],0
+.poundrightb:	call	get_rightb
 
 
-@@next:		call	get_comma_or_end	;get comma or end
-		jne	@@nextline		;end, next line
+.next:		call	get_comma_or_end	;get comma or end
+		jne	.nextline	;end, next line
 		call	get_element		;comma, get next element, sameline
-		jmp	@@sameline
+		jmp		.sameline
 
-@@done:		inc	[@@pass]		;another pass?
-		cmp	[@@pass],1
-		je	@@nextpass
+.done:		inc	[.@pass]		;another pass?
+		cmp	[.@pass],1
+		je	.nextpass
 
 		ret
 
 
-@@tryvalueint:	mov	bl,[@@pass]		;try to get int value
+.tryvalueint:	mov	bl,[.@pass]		;try to get int value
 		xor	bl,1
 		call	try_value_int
 		test	[exp_flags],100b	;z=0 if unresolved
 		ret
 
 
-@@checkparam:	push	ebx			;if symbol is a parameter, substitute the parameter value
+.checkparam:	push	ebx			;if symbol is a parameter, substitute the parameter value
 		lea	esi,[symbol2]
 		lea	edi,[symbol]
 		mov	ecx,32
 	rep	movsb
 		call	find_param
 		cmp	al,type_undefined
-		jne	@@param
+		jne	.param
 		pop	ebx
 		ret
 
-@@param:	mov	[@@float],0		;symbol is a parameter
+.param:	mov	[.@float],0		;symbol is a parameter
 		cmp	al,type_con
-		je	@@paramint
-		inc	[@@float]
-@@paramint:	mov	[@@assign_type],al
-		mov	[@@assign_value],ebx
+		je	.paramint
+		inc	[.@float]
+.paramint:	mov	[.@assign_type],al
+		mov	[.@assign_value],ebx
 		pop	eax
 		ret
 
-
-dbx		@@pass
-dbx		@@float
-dbx		@@enum_valid
-ddx		@@enum_value
-ddx		@@enum_step
-dbx		@@assign_flag
-dbx		@@assign_type
-ddx		@@assign_value
+		udataseg
+dbx		.@pass
+dbx		.@float
+dbx		.@enum_valid
+ddx		.@enum_value
+ddx		.@enum_step
+dbx		.@assign_flag
+dbx		.@assign_type
+ddx		.@assign_value
+		codeseg
 ;
 ;
 ; Compile obj blocks - id and filenames only
@@ -3235,37 +3237,37 @@ compile_obj_blocks_id:
 
 		call	reset_element		;reset element
 
-@@nextblock:	mov	dl,block_obj		;scan for obj block
+.nextblock:	mov	dl,block_obj		;scan for obj block
 		call	next_block
 
-@@nextline:	call	get_element		;get element, check for eof/end
-		jc	@@done
+.nextline:	call	get_element		;get element, check for eof/end
+		jc		.done
 		cmp	al,type_end
-		je	@@nextline
+		je		.nextline
 
 		cmp	al,type_undefined	;check for new obj name
-		je	@@newobj
+		je		.newobj
 
 		cmp	al,type_block		;block?
 		jne	error_eauon
 		call	back_element		;yes, back up
-		jmp	@@nextblock		;resume scan for next obj block
+		jmp	.nextblock	;resume scan for next obj block
 
 
-@@newobj:	call	backup_symbol		;backup obj name
+.newobj:	call	backup_symbol		;backup obj name
 
-		mov	[@@count],1		;if no [count] specified, use 1
+		mov	[.@count],1		;if no [count] specified, use 1
 		call	check_leftb
-		jne	@@nocount
+		jne		.nocount
 		call	get_value_int		;make sure count valid
 		or	ebx,ebx
-		jz	@@counterror
+		jz		.counterror
 		cmp	ebx,255
-		jbe	@@countokay
-@@counterror:	jmp	error_ocmbf1tx
-@@countokay:	mov	[@@count],ebx
+		jbe		.countokay
+.counterror:	jmp	error_ocmbf1tx
+.countokay:	mov	[.@count],ebx
 		call	get_rightb
-@@nocount:
+.nocount:
 		call	get_colon		;get colon
 
 		call	get_filename		;get filename with length
@@ -3277,7 +3279,7 @@ compile_obj_blocks_id:
 
 		mov	edi,edx			;enter filename
 		shl	edi,8
-		add	edi,offset obj_filenames
+		add	edi,obj_filenames
 		lea	esi,[filename]
 	rep	movsb
 
@@ -3292,10 +3294,10 @@ compile_obj_blocks_id:
 		mov	al,type_obj
 		call	enter_symbol2_print
 
-		mov	ecx,[@@count]		;enter instances
+		mov	ecx,[.@count]		;enter instances
 		mov	[obj_instances+edx*4],ecx
 
-@@index:	mov	eax,[obj_count]		;enter file number into index
+.index:	mov	eax,[obj_count]		;enter file number into index
 		cmp	eax,objs_limit		;object limit exceeded?
 		je	error_loxoie
 		mov	eax,edx
@@ -3303,19 +3305,19 @@ compile_obj_blocks_id:
 		mov	eax,0
 		call	enter_obj_long
 		inc	[obj_count]
-		loop	@@index
+		loop	 .index
 
 
 		mov	[obj_params+edx*4],0	;parameter list is empty by default
 
 		call	get_pipe_or_end		;any parameters?
-		jne	@@noparams
+		jne	.noparams
 
 		mov	eax,param_limit		;get parameter base
 		mul	edx
 		mov	edx,eax
 
-@@param:	mov	eax,[obj_files]		;check param limit
+.param:	mov	eax,[obj_files]		;check param limit
 		cmp	[obj_params+eax*4],param_limit
 		je	error_tmop
 
@@ -3325,7 +3327,7 @@ compile_obj_blocks_id:
 
 		mov	edi,edx			;enter symbol into parameter names
 		shl	edi,5			;multiply by 32 for parameter name size
-		add	edi,offset obj_param_names
+		add	edi,obj_param_names
 		lea	esi,[symbol]
 		mov	ecx,32
 	rep	movsb
@@ -3334,9 +3336,9 @@ compile_obj_blocks_id:
 
 		call	get_value		;get type and value
 		mov	al,type_con
-		jnc	@@notfloat
+		jnc	.notfloat
 		mov	al,type_con_float
-@@notfloat:	mov	[obj_param_types+edx],al
+.notfloat:	mov	[obj_param_types+edx],al
 		mov	[obj_param_values+edx*4],ebx
 
 		inc	edx			;increment parameter index
@@ -3345,17 +3347,18 @@ compile_obj_blocks_id:
 		inc	[obj_params+eax*4]
 
 		call	get_comma_or_end	;another parameter?
-		je	@@param
-@@noparams:
+		je	.param
+.noparams:
 
-@@objdone:	inc	[obj_files]		;inc obj file number
+.objdone:	inc	[obj_files]		;inc obj file number
 
-		jmp	@@nextline
+		jmp		.nextline
 
-@@done:		ret
+.done:		ret
 
-
-ddx		@@count
+		udataseg
+ddx		.@count
+		codeseg
 ;
 ;
 ; Compile sub blocks - id only
@@ -3363,104 +3366,104 @@ ddx		@@count
 compile_sub_blocks_id:
 
 		cmp	[pasm_mode],1		;if pasm mode, done
-		je	@@done
+		je		.done
 
 		mov	eax,[obj_ptr]		;record sub index base (after obj index)
 		shr	eax,2
-		mov	[@@base],eax
+		mov	[.@base],eax
 
-		mov	[@@first],0		;reset 'first' flag
+		mov	[.@first],0		;reset 'first' flag
 
 		mov	dl,block_pub		;compile pub id's
-		call	@@compile
+		call		.compile
 
-		cmp	[@@first],0		;if no pubs, error
+		cmp	[.@first],0		;if no pubs, error
 		je	error_npmf
 
 		mov	dl,block_pri		;compile pri id's
-		call	@@compile
+		call		.compile
 
 		mov	eax,0			;enter 0 (future size) into index
 		jmp	enter_obj_long		;(done)
 
 
-@@compile:	call	reset_element		;reset element
+.compile:	call	reset_element		;reset element
 
-@@nextblock:	call	next_block		;scan for pub/pri block
-		jc	@@done
+.nextblock:	call	next_block		;scan for pub/pri block
+		jc		.done
 
 		call	get_element		;get new sub name
-		jc	@@error
+		jc		.error
 		cmp	al,type_undefined
-		je	@@newsub
-@@error:	jmp	error_eaumn
+		je		.newsub
+.error:	jmp	error_eaumn
 
 
-@@newsub:	call	backup_symbol		;backup sub name
+.newsub:	call	backup_symbol		;backup sub name
 
-		mov	[@@params],0		;reset parameter count
-		mov	[@@results],0		;reset result count
+		mov	[.@params],0		;reset parameter count
+		mov	[.@results],0		;reset result count
 
 
 		call	get_left		;get '('
 		call	check_right		;if ')', no parameters
-		je	@@noparams
+		je		.noparams
 
-@@param:	call	get_element		;get parameter name, must be unique
+.param:	call	get_element		;get parameter name, must be unique
 		cmp	al,type_undefined
 		jne	error_eaupn
-		inc	[@@params]		;inc parameter count
-		cmp	[@@params],params_limit
+		inc	[.@params]		;inc parameter count
+		cmp	[.@params],params_limit
 		ja	error_loxpe
 		call	get_comma_or_right	;get comma or ')'
-		je	@@param
-@@noparams:
+		je		.param
+.noparams:
 
 		call	check_colon		;check for ':' to signify result(s)
-		jne	@@noresults
+		jne		.noresults
 
-@@result:	call	get_element		;get result name, must be unique
+.result:	call	get_element		;get result name, must be unique
 		cmp	al,type_undefined
 		jne	error_eaurn
-		inc	[@@results]		;inc result count
-		cmp	[@@results],results_limit
+		inc	[.@results]		;inc result count
+		cmp	[.@results],results_limit
 		ja	error_loxre
 		call	check_comma		;check for comma
-		je	@@result
-@@noresults:
+		je		.result
+.noresults:
 
 		call	get_pipe_or_end		;get pipe or end
-		jne	@@nolocals
+		jne		.nolocals
 
-@@local:	call	get_element		;get alignw/alignl, byte/word/long, or variable name
+.local:	call	get_element		;get alignw/alignl, byte/word/long, or variable name
 		call	check_align		;alignw/alignl?
-		jne	@@noalign
+		jne		.noalign
 		call	get_element
-@@noalign:	cmp	al,type_size		;byte/word/long override?
-		jne	@@nosize
+.noalign:	cmp	al,type_size		;byte/word/long override?
+		jne		.nosize
 		call	get_element		;get variable name
-@@nosize:	cmp	al,type_undefined	;verify variable name is unique
+.nosize:	cmp	al,type_undefined	;verify variable name is unique
 		jne	error_eauvnsa
 
 		call	check_leftb		;check for '[' to signify array
-		jne	@@noarray
+		jne		.noarray
 		call	get_value_int		;array, skip size
 		call	get_rightb		;get ']'
-@@noarray:
+.noarray:
 		call	get_comma_or_end	;get comma or end
-		je	@@local			;if comma, get next local
-@@nolocals:
+		je	.local		;if comma, get next local
+.nolocals:
 
 		mov	ebx,[obj_ptr]		;get sub index
 		shr	ebx,2
 		mov	eax,ebx
-		sub	eax,[@@base]		;subs limit exceeded?
+		sub	eax,[.@base]		;subs limit exceeded?
 		cmp	eax,subs_limit
 		je	error_loxppme
 
-		mov	eax,[@@params]		;get parameter count
+		mov	eax,[.@params]		;get parameter count
 		shl	eax,4
-		or	eax,[@@results]		;get result count
+		or	eax,[.@results]		;get result count
 		shl	eax,20
 		or	ebx,eax
 		mov	al,type_method		;enter method symbol
@@ -3472,24 +3475,26 @@ compile_sub_blocks_id:
 		call	enter_obj_long		;enter flag/params/results into index[31:20], index[19:0] will be set in future
 
 		cmp	dl,block_pub		;if pub, enter name, results (0..15), and parameters into pub list
-		jne	@@notpub
+		jne		.notpub
 		call	pubcon_symbol2
-		mov	eax,[@@results]
+		mov	eax,[.@results]
 		call	pubcon_byte
-		mov	eax,[@@params]
+		mov	eax,[.@params]
 		call	pubcon_byte
-@@notpub:
-		mov	[@@first],1		;set first flag
+.notpub:
+		mov	[.@first],1		;set first flag
 
-		jmp	@@nextblock		;skip sub body, get next block
+		jmp	.nextblock	;skip sub body, get next block
 
-@@done:		ret
+.done:		ret
 
 
-dbx		@@first
-ddx		@@base
-ddx		@@params
-ddx		@@results
+		udataseg
+dbx		.@first
+ddx		.@base
+ddx		.@params
+ddx		.@results
+		codeseg
 ;
 ;
 ; Compile dat blocks - filenames only
@@ -3500,42 +3505,42 @@ compile_dat_blocks_fn:
 
 		call	reset_element		;reset element
 
-@@nextblock:	mov	dl,block_dat		;scan for dat block
+.nextblock:	mov	dl,block_dat		;scan for dat block
 		call	next_block
 
-@@nextelement:	call	get_element		;get element, check for eof
-		jc	@@done
+.nextelement:	call	get_element		;get element, check for eof
+		jc		.done
 
 		cmp	al,type_file		;check for 'file'
-		je	@@gotfile
+		je		.gotfile
 
 		cmp	al,type_block		;block?
-		jne	@@nextelement
+		jne		.nextelement
 
 		call	back_element		;yes, back up
-		jmp	@@nextblock		;resume scan for next dat block
+		jmp	.nextblock	;resume scan for next dat block
 
 
-@@gotfile:	call	get_filename		;'file', get filename with length
+.gotfile:	call	get_filename		;'file', get filename with length
 		inc	ecx			;include zero-terminator
 
 		xor	ebx,ebx			;check against other filenames
-@@check:	lea	esi,[filename]		;get pointers
+.check:	lea	esi,[filename]		;get pointers
 		mov	edi,ebx
 		shl	edi,8
-		add	edi,offset dat_filenames
+		add	edi,dat_filenames
 
 		cmp	ebx,[dat_files]		;if end of filenames, new
-		je	@@new
+		je		.new
 
 		push	ecx			;compare filenames
 	repe	cmpsb
 		pop	ecx
-		je	@@got			;if equal, got
+		je	.got		;if equal, got
 		inc	ebx			;try next filename
-		jmp	@@check
+		jmp		.check
 
-@@new:		inc	[dat_files]		;unique file, check files limit
+.new:		inc	[dat_files]		;unique file, check files limit
 		cmp	[dat_files],file_limit
 		ja	error_loxudfe
 
@@ -3546,22 +3551,22 @@ compile_dat_blocks_fn:
 		mov	eax,[filename_finish]
 		mov	[dat_name_finish+ebx*4],eax
 
-@@got:		jmp	@@nextelement		;get next element
+.got:		jmp	.nextelement	;get next element
 
-@@done:		ret
+.done:		ret
 ;
 ;
 ; Compile obj pub/con symbols, also validates obj files
 ;
 compile_obj_symbols:
 
-		mov	[@@file],0		;reset object file counter
+		mov	[.@file],0		;reset object file counter
 
-@@nextfile:	mov	eax,[@@file]		;another file?
+.nextfile:	mov	eax,[.@file]		;another file?
 		cmp	eax,[obj_files]
-		jne	@@getfile
+		jne		.getfile
 		ret
-@@getfile:
+.getfile:
 		lea	esi,[obj_data]		;get object start and length
 		add	esi,[obj_offsets+eax*4]
 		mov	ecx,[obj_lengths+eax*4]
@@ -3571,91 +3576,91 @@ compile_obj_symbols:
 
 		push	esi			;verify obj checksum
 		mov	ah,0
-@@checksum:	lodsb
+.checksum:	lodsb
 		add	ah,al
-		loop	@@checksum
+		loop	 .checksum
 		cmp	ah,0
-		jne	@@error
+		jne		.error
 		pop	esi
 
 		lodsd				;get vsize
 		test	eax,11b			;make sure long aligned
-		jnz	@@error
+		jnz		.error
 
 		lodsd				;get psize
 		test	eax,11b			;make sure long aligned
-		jnz	@@error
+		jnz		.error
 
 		add	eax,esi			;skip past obj bytes
 		inc	eax			;skip past checksum
 
-		mov	[@@pub],0		;determine initial pub index
-@@findpub:	test	[byte esi+3],80h	;if msb set, initial pub
-		jnz	@@gotpub
-		add	[@@pub],2		;msb clear, advance pub index by 2
+		mov	[.@pub],0		;determine initial pub index
+.findpub:	test	byte [esi+3],80h	;if msb set, initial pub
+		jnz		.gotpub
+		add	[.@pub],2		;msb clear, advance pub index by 2
 		add	esi,8			;skip two obj longs
-		jmp	@@findpub		;check next
-@@gotpub:
+		jmp	.findpub	;check next
+.gotpub:
 		mov	esi,eax			;point past checksum
 
 
-@@nextsymbol:	cmp	esi,edx			;check for next pub/con symbol
-		jb	@@getsymbol		;if below eof, get symbol
-		ja	@@error			;if beyond eof, error
-		inc	[@@file]		;eof, next file
-		jmp	@@nextfile
+.nextsymbol:	cmp	esi,edx			;check for next pub/con symbol
+		jb	.getsymbol	;if below eof, get symbol
+		ja	.error		;if beyond eof, error
+		inc	[.@file]		;eof, next file
+		jmp		.nextfile
 
-@@getsymbol:	lea	edi,[symbol2]		;get symbol
+.getsymbol:	lea	edi,[symbol2]		;get symbol
 		mov	ecx,symbol_limit+1
 		lodsb
-@@chr:		call	check_word_chr
-		jc	@@error
+.chr:		call	check_word_chr
+		jc		.error
 		stosb
-		mov	eax,[@@file]		;add file+1 and 0 to symbol
+		mov	eax,[.@file]		;add file+1 and 0 to symbol
 		inc	eax
-		mov	[word edi],ax
+		mov	word [edi],ax
 		lodsb
 		cmp	al,results_limit	;end of pub/con symbol?
-		jbe	@@objpub		;0..15 = end of pub (result count)
+		jbe	.objpub	;0..15 = end of pub (result count)
 		cmp	al,results_limit+2	;16 = end of con
-		jbe	@@objcon		;17 = end of con float
-		loop	@@chr			;get next symbol chr
-		jmp	@@error
+		jbe	.objcon	;17 = end of con float
+		loop	.chr		;get next symbol chr
+		jmp		.error
 
-@@objpub:	shl	eax,20			;obj pub, get results into ebx[23:20]
+.objpub:	shl	eax,20			;obj pub, get results into ebx[23:20]
 		mov	ebx,eax
 		lodsb				;get params into ebx[31:24]
 		cmp	al,params_limit
-		ja	@@error
+		ja		.error
 		shl	eax,24
 		or	ebx,eax
-		or	ebx,[@@pub]		;get pub index into ebx[19:0]
+		or	ebx,[.@pub]		;get pub index into ebx[19:0]
 		mov	al,type_objpub		;get type
-		inc	[@@pub]			;next pub
-		jmp	@@enter			;enter symbol
+		inc	[.@pub]			;next pub
+		jmp	.enter		;enter symbol
 
-@@objcon:	sub	al,results_limit+1	;obj con, get type_objcon/type_objcon_float
+.objcon:	sub	al,results_limit+1	;obj con, get type_objcon/type_objcon_float
 		add	al,type_objcon
 		push	eax			;get value
 		lodsd
 		mov	ebx,eax
 		pop	eax
-@@enter:	call	enter_symbol2_print	;enter symbol
-		jmp	@@nextsymbol		;next symbol
+.enter:	call	enter_symbol2_print	;enter symbol
+		jmp	.nextsymbol	;next symbol
 
 
-@@error:	mov	[print_length],0	;obj file error
+.error:	mov	[print_length],0	;obj file error
 		call	print_string
 		db	'Invalid object file: ',0
-		mov	esi,[@@file]
+		mov	esi,[.@file]
 		shl	esi,8
-		add	esi,offset obj_filenames
-@@error2:	lodsb
+		add	esi,obj_filenames
+.error2:	lodsb
 		cmp	al,0
-		je	@@error3
+		je		.error3
 		call	print_chr
-		jmp	@@error2
-@@error3:	call	print_string
+		jmp		.error2
+.error3:	call	print_string
 		db	'.obj',0
 		mov	al,0
 		call	print_chr
@@ -3665,8 +3670,10 @@ compile_obj_symbols:
 		jmp	abort
 
 
-ddx		@@file
-ddx		@@pub
+		udataseg
+ddx		.@file
+ddx		.@pub
+		codeseg
 ;
 ;
 ; Compile var blocks
@@ -3674,77 +3681,77 @@ ddx		@@pub
 compile_var_blocks:
 
 		cmp	[pasm_mode],1		;if pasm mode, done
-		je	@@ret
+		je		.ret
 
 		mov	[var_ptr],4		;reset variable pointer to accommodate long pointer to object
 
 		call	reset_element		;reset element
 
-@@nextblock:	mov	dl,block_var		;scan for var block
+.nextblock:	mov	dl,block_var		;scan for var block
 		call	next_block
 
-@@nextline:	call	get_element		;get element, check for eof/end
-		jc	@@done
+.nextline:	call	get_element		;get element, check for eof/end
+		jc		.done
 		cmp	al,type_end
-		je	@@nextline
+		je		.nextline
 
 		call	check_align		;check for alignw/alignl
-		jne	@@notalign
-		call	@@align
-		jmp	@@nextline
-@@notalign:
+		jne		.notalign
+		call		.align
+		jmp		.nextline
+.notalign:
 		cmp	al,type_size		;check for byte/word/long
-		je	@@size
+		je		.size
 
 		cmp	al,type_undefined	;if new variable name, treat as long
 		mov	ecx,2
-		je	@@newlong
+		je		.newlong
 
 		cmp	al,type_block		;block?
 		jne	error_eauvnsa
 		call	back_element		;yes, back up
-		jmp	@@nextblock		;resume scan for next var block
+		jmp	.nextblock	;resume scan for next var block
 
 
-@@size:		mov	ecx,ebx			;byte/word/long, get size in ecx
+.size:		mov	ecx,ebx			;byte/word/long, get size in ecx
 
-@@another:	call	get_element		;get new variable name
+.another:	call	get_element		;get new variable name
 		cmp	al,type_undefined
 		jne	error_eauvn
-@@newlong:	call	backup_symbol
+.newlong:	call	backup_symbol
 
 		mov	ebx,1			;if no [count] specified, use 1
 		call	check_leftb
-		jne	@@nocount
+		jne		.nocount
 		call	get_value_int		;[count], get count
 		cmp	ebx,obj_limit
-		call	@@checkabove
+		call		.checkabove
 		call	get_rightb
-@@nocount:
+.nocount:
 		shl	ebx,cl			;update var pointer
 		xchg	[var_ptr],ebx
 		add	[var_ptr],ebx
-		call	@@check
+		call		.check
 
 		mov	al,type_var_byte	;enter symbol
 		add	al,cl
 		call	enter_symbol2_print
 
 		call	get_comma_or_end	;get comma or end
-		je	@@another
-		jmp	@@nextline
+		je		.another
+		jmp		.nextline
 
 
-@@done:		mov	ecx,11b			;done, align to long
+.done:		mov	ecx,11b			;done, align to long
 
-@@align:	test	[var_ptr],ecx		;align to word or long
-		jz	@@ret
+.align:	test	[var_ptr],ecx		;align to word or long
+		jz		.ret
 		or	[var_ptr],ecx
 		inc	[var_ptr]
-@@check:	cmp	[var_ptr],obj_limit	;check size
-@@checkabove:	ja	error_tmvsid
+.check:	cmp	[var_ptr],obj_limit	;check size
+.checkabove:	ja	error_tmvsid
 
-@@ret:		ret
+.ret:		ret
 ;
 ;
 ; Compile dat blocks
@@ -3759,67 +3766,67 @@ compile_inline_section:				;inline mode
 
 
 compile_dat:	mov	eax,[obj_ptr]		;save obj_ptr
-		mov	[@@objptr],eax
+		mov	[.@objptr],eax
 
 		mov	eax,[asm_local]		;save asm_local
-		mov	[@@local],eax
+		mov	[.@local],eax
 
 		mov	eax,[source_ptr]	;save source_ptr for inline mode
-		mov	[@@sourceptr],eax
+		mov	[.@sourceptr],eax
 
-		mov	[@@pass],0		;reset pass
+		mov	[.@pass],0		;reset pass
 
-@@passloop:	mov	eax,[@@objptr]		;set obj_ptr
+.passloop:	mov	eax,[.@objptr]		;set obj_ptr
 		mov	[obj_ptr],eax
 
-		mov	eax,[@@local]		;set asm_local
+		mov	eax,[.@local]		;set asm_local
 		mov	[asm_local],eax
 
 		mov	[hub_org],00000h	;reset hub org
 		mov	[hub_org_limit],100000h	;reset hub org limit
 
-		mov	[@@size],0		;reset size to byte
+		mov	[.@size],0		;reset size to byte
 
 		cmp	[inline_flag],1		;block or inline mode?
-		jne	@@passblock
+		jne		.passblock
 
 		mov	[orgh],0		;inline mode, start in org mode
 		push	[inline_cog_org]	;reset cog org
 		pop	[cog_org]
 		push	[inline_cog_org_limit]	;reset cog org limit
 		pop	[cog_org_limit]
-		mov	eax,[@@sourceptr]	;reset source_ptr
+		mov	eax,[.@sourceptr]	;reset source_ptr
 		mov	[source_ptr],eax
-		jmp	@@passprep
+		jmp		.passprep
 
-@@passblock:	mov	[orgh],1			;block mode, start in orgh mode
+.passblock:	mov	[orgh],1			;block mode, start in orgh mode
 		mov	[cog_org],000h shl 2		;reset cog org
 		mov	[cog_org_limit],1F8h shl 2	;reset cog org limit
 		cmp	[pasm_mode],1			;set hub org according to pasm_mode
 		mov	eax,[obj_ptr]			;use obj_ptr for pasm_mode
-		je	@@passpasm
+		je		.passpasm
 		mov	eax,00400h			;use $00400 for spin_mode
-@@passpasm:	mov	[hub_org],eax
+.passpasm:	mov	[hub_org],eax
 		sub	eax,[obj_ptr]			;set orgh_offset
 		mov	[orgh_offset],eax
 		mov	[hub_org_limit],100000h		;reset hub org limit
 		call	reset_element			;reset element
-@@nextblock:	mov	dl,block_dat			;scan for dat block
+.nextblock:	mov	dl,block_dat			;scan for dat block
 		call	next_block
 
-@@passprep:	push	[source_start]		;prepare dat block info
-		pop	[@@srcstart]
+.passprep:	push	[source_start]		;prepare dat block info
+		pop	[.@srcstart]
 		push	[obj_ptr]
-		pop	[@@objstart]
-		mov	[@@infoflag],0
+		pop	[.@objstart]
+		mov	[.@infoflag],0
 
-@@nextline:	call	get_element		;get element, check for eof/end
-		jc	@@eof
-		mov	[@@infoflag],1		;not eof, set info flag
+.nextline:	call	get_element		;get element, check for eof/end
+		jc		.eof
+		mov	[.@infoflag],1		;not eof, set info flag
 		cmp	al,type_end
-		je	@@nextline
+		je		.nextline
 
-		mov	[@@sizefit],0		;clear size fit flag
+		mov	[.@sizefit],0		;clear size fit flag
 
 		xor	edx,edx			;reset symbol flag
 		push	[source_start]		;save info start in case symbol
@@ -3829,271 +3836,271 @@ compile_dat:	mov	eax,[obj_ptr]		;save obj_ptr
 		push	[source_finish]		;save info finish in case (local) symbol
 		pop	[inf_finish]
 		cmp	al,type_undefined	;check for undefined symbol
-		jne	@@notundef		;if not undefined symbol, skip
-		call	@@asmlocal		;if not local symbol, inc asm local
+		jne	.notundef	;if not undefined symbol, skip
+		call	.asmlocal	;if not local symbol, inc asm local
 		or	edx,80000000h		;symbol, set symbol flag
 		call	backup_symbol		;backup symbol
 		call	get_element		;get next element
 		cmp	al,type_end		;if not end, continue
-		jne	@@continue
-		call	@@entersymbol		;symbol only, enter symbol
-		jmp	@@nextline		;..and check next line
-@@notundef:
+		jne		.continue
+		call	.entersymbol	;symbol only, enter symbol
+		jmp	.nextline	;..and check next line
+.notundef:
 		cmp	al,type_dat_byte	;if type_dat_byte/word/long/res..
-		jb	@@continue		;..and second pass, okay
+		jb	.continue	;..and second pass, okay
 		cmp	al,type_dat_long_res
-		ja	@@continue
-		call	@@asmlocal		;if not local symbol, inc asm local
-		cmp	[@@pass],0		;if pass 0, symbol redeclared
+		ja		.continue
+		call	.asmlocal	;if not local symbol, inc asm local
+		cmp	[.@pass],0		;if pass 0, symbol redeclared
 		je	error_siad
 		call	get_element		;get next element
 		cmp	al,type_end		;if end, check next line
-		je	@@nextline
-@@continue:
+		je		.nextline
+.continue:
 		cmp	al,type_size		;check for size
-		je	@@data
+		je		.data
 		cmp	al,type_size_fit	;check for size fit
-		je	@@datachk
+		je		.datachk
 		cmp	al,type_asm_dir		;check for assembly directive
-		je	@@dir
+		je		.dir
 		cmp	al,type_asm_cond	;check for assembly condition
-		je	@@cond
-		call	@@checkinst		;check for assembly instruction
-		je	@@instr
+		je		.cond
+		call	.checkinst	;check for assembly instruction
+		je		.instr
 
 		cmp	[inline_flag],1		;block or inline mode?
-		je	@@inlinechk
+		je		.inlinechk
 
 		cmp	al,type_file		;block, check for file
-		je	@@file
+		je		.file
 
 		cmp	al,type_block		;block?
 		jne	error_eaunbwlo
 		call	back_element		;yes, back up
-		call	@@enterinfo		;enter info
-		jmp	@@nextblock		;continue scan for next dat block
+		call	.enterinfo	;enter info
+		jmp	.nextblock	;continue scan for next dat block
 
-@@inlinechk:	cmp	al,type_asm_end		;inline, must be 'end'
+.inlinechk:	cmp	al,type_asm_end		;inline, must be 'end'
 		jne	error_eidbwloe
 		mov	ecx,0FD64002Dh		;enter RET instruction
-		call	@@enterlong
-		jmp	@@passdone
+		call		.enterlong
+		jmp		.passdone
 
-@@eof:		cmp	[inline_flag],1		;eof, error if inline mode
+.eof:		cmp	[inline_flag],1		;eof, error if inline mode
 		je	error_eend
 
-@@passdone:	call	@@enterinfo		;enter any info
-		inc	[@@pass]		;next pass
-		cmp	[@@pass],2
-		jne	@@passloop
+.passdone:	call	.enterinfo	;enter any info
+		inc	[.@pass]		;next pass
+		cmp	[.@pass],2
+		jne		.passloop
 
 		cmp	[inline_flag],1		;done, inline mode?
-		jne	@@done
+		jne		.done
 		call	reset_symbols_inline	;cancel inline symbols
 		call	write_symbols_local
-@@done:		ret
+.done:		ret
 
 
-@@datachk:	mov	[@@sizefit],1		;set size fit flag
+.datachk:	mov	[.@sizefit],1		;set size fit flag
 
-@@data:		mov	[@@size],bl		;byte/word/long data, set size
-		call	@@entersymbol		;enter any symbol
+.data:		mov	[.@size],bl		;byte/word/long data, set size
+		call	.entersymbol	;enter any symbol
 
 		call	check_end		;if end, check next line
-		je	@@nextline
+		je		.nextline
 
-@@another:	call	get_element		;check for size override
+.another:	call	get_element		;check for size override
 		cmp	al,type_size
-		jne	@@datansize
+		jne		.datansize
 		mov	dl,bl			;size override
-		jmp	@@dataor
-@@datansize:	cmp	al,type_fvar		;check for fvar/fvars
-		jne	@@datanor
+		jmp		.dataor
+.datansize:	cmp	al,type_fvar		;check for fvar/fvars
+		jne		.datanor
 		push	ebx			;fvar/fvars
-		call	@@getvalueint
+		call		.getvalueint
 		mov	eax,ebx
 		pop	ebx
 		cmp	bl,1
-		je	@@datafvars
+		je		.datafvars
 		test	eax,0E0000000h		;fvar must have three msb's clear
 		jnz	error_fvar
 		call	compile_rfvar
-		jmp	@@datanext
-@@datafvars:	mov	ebx,eax			;fvars must have four msb's same
+		jmp		.datanext
+.datafvars:	mov	ebx,eax			;fvars must have four msb's same
 		sar	ebx,32-4
-		jz	@@datafvarsok
+		jz		.datafvarsok
 		inc	ebx
 		jnz	error_fvar
-@@datafvarsok:	call	compile_rfvars
-		jmp	@@datanext
-@@datanor:	call	back_element		;no size override, back up
-		mov	dl,[@@size]
-@@dataor:	cmp	dl,2			;if long size, allow float
-		jne	@@notlong
-		call	@@tryvalue		;get value/value[count] - integer or float
-		jmp	@@islong
-@@notlong:	call	@@tryvalueint		;get value/value[count] - integer only
-@@islong:	mov	ecx,1			;if no [count] specified, do once
+.datafvarsok:	call	compile_rfvars
+		jmp		.datanext
+.datanor:	call	back_element		;no size override, back up
+		mov	dl,[.@size]
+.dataor:	cmp	dl,2			;if long size, allow float
+		jne		.notlong
+		call	.tryvalue	;get value/value[count] - integer or float
+		jmp		.islong
+.notlong:	call	.tryvalueint	;get value/value[count] - integer only
+.islong:	mov	ecx,1			;if no [count] specified, do once
 		call	check_leftb
-		jne	@@single
+		jne		.single
 		push	ebx			;[count] specified, get count
-		call	@@getvalueint
+		call		.getvalueint
 		mov	ecx,ebx
 		pop	ebx
 		call	get_rightb
-@@single:	call	@@enter			;enter value once, or count times
-@@datanext:	call	get_comma_or_end	;get comma or end
-		jne	@@nextline		;if end, check next line
-		jmp	@@another		;comma, get next element and process
+.single:	call	.enter		;enter value once, or count times
+.datanext:	call	get_comma_or_end	;get comma or end
+		jne	.nextline	;if end, check next line
+		jmp	.another	;comma, get next element and process
 
 
-@@file:		mov	[@@size],0		;file, set size to byte
-		call	@@entersymbol		;enter any symbol
+.file:		mov	[.@size],0		;file, set size to byte
+		call	.entersymbol	;enter any symbol
 		call	get_filename		;get filename with length
 		inc	ecx			;include zero-terminator
 		xor	edx,edx			;check against other filenames
-@@filefind:	cmp	edx,[dat_files]		;if end of filenames, internal error
+.filefind:	cmp	edx,[dat_files]		;if end of filenames, internal error
 		je	error_idfnf
 		lea	esi,[filename]		;get filename pointers
 		mov	edi,edx
 		shl	edi,8
-		add	edi,offset dat_filenames
+		add	edi,dat_filenames
 		push	ecx			;compare filenames
 	repe	cmpsb
 		pop	ecx
-		je	@@filefound		;if equal, got
+		je	.filefound	;if equal, got
 		inc	edx			;try next filename
-		jmp	@@filefind
-@@filefound:	mov	esi,[dat_offsets+edx*4]
-		add	esi,offset dat_data
+		jmp		.filefind
+.filefound:	mov	esi,[dat_offsets+edx*4]
+		add	esi,dat_data
 		mov	ecx,[dat_lengths+edx*4]
-		jecxz	@@filedone		;enter file bytes
-@@filebyte:	lodsb
-		call	@@enterbyte
-		loop	@@filebyte
-@@filedone:	call	get_end			;get end
-		jmp	@@nextline		;next line
+		jecxz	.filedone	;enter file bytes
+.filebyte:	lodsb
+		call		.enterbyte
+		loop	 .filebyte
+.filedone:	call	get_end			;get end
+		jmp	.nextline	;next line
 
 
-@@dir:		mov	[@@size],2		;assembly directive, set long size
+.dir:		mov	[.@size],2		;assembly directive, set long size
 
 		cmp	bl,dir_fit		;handle directive
-		je	@@dirfit
+		je		.dirfit
 		cmp	bl,dir_res
-		je	@@dirres
+		je		.dirres
 		cmp	bl,dir_orgf
-		je	@@dirorgf
+		je		.dirorgf
 		cmp	bl,dir_org
-		je	@@dirorg
+		je		.dirorg
 		cmp	bl,dir_alignw
-		je	@@diralignw
+		je		.diralignw
 		cmp	bl,dir_alignl
-		je	@@diralignl
+		je		.diralignl
 
 		cmp	[inline_flag],1		;orgh, make sure not inline mode
 		je	error_ohnawiac
 		mov	[orgh],1		;set orgh mode
-		call	@@nosymbol		;make sure no symbol
+		call	.nosymbol	;make sure no symbol
 		call	get_element		;preview next element
 		call	back_element
 		mov	ecx,100000h		;ready default orgh limit
 		cmp	al,type_end		;no argument?
-		jne	@@dirorgho
+		jne		.dirorgho
 		mov	ebx,[obj_ptr]		;no argument, if pasm mode set hub_org to obj_ptr
 		cmp	[pasm_mode],1
-		je	@@dirorghdef
+		je		.dirorghdef
 		mov	ebx,400h		;no argument, spin mode, set hub_org to $400
-		jmp	@@dirorghdef
-@@dirorgho:	call	@@getvalueint		;argument, get value
+		jmp		.dirorghdef
+.dirorgho:	call	.getvalueint	;argument, get value
 		cmp	[pasm_mode],1		;if spin mode, make sure at least $400
-		je	@@dirorghp
+		je		.dirorghp
 		cmp	ebx,400h
 		jb	error_habxl
-@@dirorghp:	cmp	ebx,obj_limit		;make sure within hard limit
+.dirorghp:	cmp	ebx,obj_limit		;make sure within hard limit
 		ja	error_haec
 		mov	ecx,obj_limit		;ready default limit in case no comma
 		call	check_comma
-		jne	@@dirorghdef
+		jne		.dirorghdef
 		push	ebx			;comma, get limit value
-		call	@@getvalueint
+		call		.getvalueint
 		mov	ecx,ebx
 		pop	ebx
 		cmp	ecx,ebx			;make sure limit at least new orgh
 		jb	error_hael
 		cmp	ecx,obj_limit		;make sure limit within hard limit
 		ja	error_haec
-@@dirorghdef:	mov	[hub_org],ebx		;update hub org
+.dirorghdef:	mov	[hub_org],ebx		;update hub org
 		mov	[hub_org_limit],ecx	;update hub org limit
 		mov	eax,ebx			;set orgh_offset
 		sub	eax,[obj_ptr]
 		mov	[orgh_offset],eax
 		cmp	[pasm_mode],1		;if pasm mode, fill to new orgh with $00 bytes
-		jne	@@dirorghs
+		jne		.dirorghs
 		sub	ebx,[obj_ptr]
 		jc	error_hacd
 		sub	[hub_org],ebx
 		mov	ecx,ebx
 		mov	ebx,0
 		mov	dl,0
-		call	@@enter
-@@dirorghs:	call	get_end
-		jmp	@@nextline
+		call		.enter
+.dirorghs:	call	get_end
+		jmp		.nextline
 
-@@diralignw:	mov	ebx,01h			;align, get factor
-		jmp	@@diralign
-@@diralignl:	mov	ebx,03h
-@@diralign:	cmp	[inline_flag],1		;make sure not inline mode
+.diralignw:	mov	ebx,01h			;align, get factor
+		jmp		.diralign
+.diralignl:	mov	ebx,03h
+.diralign:	cmp	[inline_flag],1		;make sure not inline mode
 		je	error_aanawiac
 		test	[obj_ptr],ebx		;fill with $00 bytes until aligned
-		jz	@@diralignx
+		jz		.diralignx
 		push	ebx
 		xor	ebx,ebx
 		mov	ecx,1
 		mov	dl,0
-		call	@@enter
+		call		.enter
 		pop	ebx
-		jmp	@@diralign
-@@diralignx:	call	get_end
-		jmp	@@nextline
+		jmp		.diralign
+.diralignx:	call	get_end
+		jmp		.nextline
 
-@@dirorg:	cmp	[inline_flag],1		;org, make sure not inline mode
+.dirorg:	cmp	[inline_flag],1		;org, make sure not inline mode
 		je	error_onawiac
-		call	@@nosymbol		;make sure no symbol
+		call	.nosymbol	;make sure no symbol
 		call	get_element		;preview next element
 		call	back_element
 		mov	ebx,000h		;ready defaults in case no argument
 		mov	ecx,1F8h
 		cmp	al,type_end		;check for end
-		je	@@dirorgdef
-		call	@@getvalueint		;argument, get value
+		je		.dirorgdef
+		call	.getvalueint	;argument, get value
 		cmp	ebx,400h
 		ja	error_caexl
 		mov	ecx,200h		;default to cog limit
 		test	ebx,600h
-		jz	@@dirorgcog
+		jz		.dirorgcog
 		shl	ecx,1			;set lut limit
-@@dirorgcog:	call	check_comma		;check for comma
-		jne	@@dirorgdef
+.dirorgcog:	call	check_comma		;check for comma
+		jne		.dirorgdef
 		push	ebx
-		call	@@getvalueint		;get limit value
+		call	.getvalueint	;get limit value
 		mov	ecx,ebx
 		pop	ebx
 		cmp	ebx,ecx
 		ja	error_cael
 		cmp	ecx,400h
 		ja	error_caexl
-@@dirorgdef:	shl	ebx,2
+.dirorgdef:	shl	ebx,2
 		mov	[cog_org],ebx		;update org
 		shl	ecx,2
 		mov	[cog_org_limit],ecx	;update org limit
 		mov	[orgh],0		;clear orgh mode
 		call	get_end
-		jmp	@@nextline
+		jmp		.nextline
 
-@@dirorgf:	cmp	[orgh],0		;orgf, not allowed in orgh mode
+.dirorgf:	cmp	[orgh],0		;orgf, not allowed in orgh mode
 		jne	error_oinaiom
-		call	@@nosymbol		;make sure no symbol
-		call	@@getvalueint		;get value and end of line
+		call	.nosymbol	;make sure no symbol
+		call	.getvalueint	;get value and end of line
 		call	get_end
 		shl	ebx,2
 		cmp	ebx,[cog_org_limit]	;limit exceeded?
@@ -4104,15 +4111,15 @@ compile_dat:	mov	eax,[obj_ptr]		;save obj_ptr
 		sub	ecx,[cog_org]
 		xor	ebx,ebx
 		mov	dl,0
-		call	@@enter
-		jmp	@@nextline
+		call		.enter
+		jmp		.nextline
 
-@@dirres:	cmp	[orgh],0		;res, not allowed in orgh mode
+.dirres:	cmp	[orgh],0		;res, not allowed in orgh mode
 		jne	error_rinaiom
-		call	@@coglong		;advance to next cog long
+		call	.coglong	;advance to next cog long
 		or	edx,40000000h		;set res symbol flag
-		call	@@entersymbol		;enter any symbol
-		call	@@getvalueint		;get value
+		call	.entersymbol	;enter any symbol
+		call	.getvalueint	;get value
 		cmp	ebx,400h
 		ja	error_cael
 		shl	ebx,2			;make byte address
@@ -4121,42 +4128,42 @@ compile_dat:	mov	eax,[obj_ptr]		;save obj_ptr
 		cmp	[cog_org],eax
 		ja	error_cael
 		call	get_end
-		jmp	@@nextline
+		jmp		.nextline
 
 
-@@dirfit:	call	@@nosymbol		;fit, make sure no symbol
-		call	@@getvalueint		;get fit limit
+.dirfit:	call	.nosymbol	;fit, make sure no symbol
+		call	.getvalueint	;get fit limit
 		cmp	[orgh],1		;handle hub/cog
-		jne	@@fitcog
+		jne		.fitcog
 		cmp	[hub_org],ebx		;fit hub
 		ja	error_haefl
-		jmp	@@fitdone
-@@fitcog:	shl	ebx,2			;fit cog
+		jmp		.fitdone
+.fitcog:	shl	ebx,2			;fit cog
 		cmp	[cog_org],ebx
 		ja	error_caefl		;limit exceeded?
-@@fitdone:	call	get_end
-		jmp	@@nextline
+.fitdone:	call	get_end
+		jmp		.nextline
 
 
-@@cond:		shl	ebx,28			;assembly condition, set cond to bl
+.cond:		shl	ebx,28			;assembly condition, set cond to bl
 		mov	ecx,ebx
 		call	get_element		;get assembly instruction
-		call	@@checkinst
-		je	@@instrcond
+		call		.checkinst
+		je		.instrcond
 		jmp	error_eaasmi
 
-@@instr:	mov	ecx,0F0000000h		;assembly instruction, set cond to always
-@@instrcond:	mov	[@@size],2		;set long size
+.instr:	mov	ecx,0F0000000h		;assembly instruction, set cond to always
+.instrcond:	mov	[.@size],2		;set long size
 
 		push	ebx			;advance to long boundary if cog mode, enter any symbol
-		call	@@coglong
-		call	@@entersymbol
+		call		.coglong
+		call		.entersymbol
 		pop	ebx
 
 		mov	eax,ebx			;save effect bits
 		shr	eax,9
 		and	al,11b
-		mov	[@@effectbits],al
+		mov	[.@effectbits],al
 
 		mov	eax,ebx			;get operand type
 		shr	eax,11
@@ -4165,96 +4172,96 @@ compile_dat:	mov	eax,[obj_ptr]		;save obj_ptr
 		and	ebx,1FFh		;isolate opcode
 
 		cmp	al,operand_d		;install opcode according to operand group
-		jae	@@oplast
+		jae		.oplast
 		shl	ebx,19
-		jmp	@@opgot
-@@oplast:	or	ecx,0D600000h
-@@opgot:	or	ecx,ebx
+		jmp		.opgot
+.oplast:	or	ecx,0D600000h
+.opgot:	or	ecx,ebx
 
-		call	[@@operands+eax*4]	;call operand handler
+		call	[.@operands+eax*4]	;call operand handler
 
 		call	get_element		;get next element
 
 		cmp	al,type_end		;end?
-		je	@@instenter
+		je		.instenter
 
 		cmp	al,type_asm_effect	;verify effect
 		jne	error_eaaeoeol
-		test	[@@effectbits],bl	;if wc/wz not allowed, error
+		test	[.@effectbits],bl	;if wc/wz not allowed, error
 		jz	error_teinafti
-		cmp	[@@effectbits],bl	;if wcz not allowed, error
+		cmp	[.@effectbits],bl	;if wcz not allowed, error
 		jb	error_teinafti
 		shl	ebx,19			;set effect bit
 		or	ecx,ebx
 		call	get_end			;get end
 
-@@instenter:	call	@@enterlong		;enter instruction
+.instenter:	call	.enterlong	;enter instruction
 
-		jmp	@@nextline		;next line
-
-
-@@operands	dd	offset @@op_ds		;operand handlers
-		dd	offset @@op_bitx
-		dd	offset @@op_testb
-		dd	offset @@op_du
-		dd	offset @@op_duii
-		dd	offset @@op_duiz
-		dd	offset @@op_ds3set
-		dd	offset @@op_ds3get
-		dd	offset @@op_ds2set
-		dd	offset @@op_ds2get
-		dd	offset @@op_ds1set
-		dd	offset @@op_ds1get
-		dd	offset @@op_dsj
-		dd	offset @@op_ls
-		dd	offset @@op_lsj
-		dd	offset @@op_dsp
-		dd	offset @@op_lsp
-		dd	offset @@op_rep
-		dd	offset @@op_jmp
-		dd	offset @@op_call
-		dd	offset @@op_calld
-		dd	offset @@op_jpoll
-		dd	offset @@op_loc
-		dd	offset @@op_aug
-		dd	offset @@op_d
-		dd	offset @@op_de
-		dd	offset @@op_l
-		dd	offset @@op_cz
-		dd	offset @@op_pollwait
-		dd	offset @@op_getbrk
-		dd	offset @@op_pinop
-		dd	offset @@op_testp
-		dd	offset @@op_pushpop
-		dd	offset @@op_xlat
-		dd	offset @@op_akpin
-		dd	offset @@op_asmclk
-		dd	offset @@op_nop
-		dd	offset @@op_debug
+		jmp	.nextline	;next line
 
 
-@@op_ds:	call	@@tryd			;inst d,s/#
+.@operands	dd .op_ds		;operand handlers
+		dd	.op_bitx
+		dd	.op_testb
+		dd	.op_du
+		dd	.op_duii
+		dd	.op_duiz
+		dd	.op_ds3set
+		dd	.op_ds3get
+		dd	.op_ds2set
+		dd	.op_ds2get
+		dd	.op_ds1set
+		dd	.op_ds1get
+		dd	.op_dsj
+		dd	.op_ls
+		dd	.op_lsj
+		dd	.op_dsp
+		dd	.op_lsp
+		dd	.op_rep
+		dd	.op_jmp
+		dd	.op_call
+		dd	.op_calld
+		dd	.op_jpoll
+		dd	.op_loc
+		dd	.op_aug
+		dd	.op_d
+		dd	.op_de
+		dd	.op_l
+		dd	.op_cz
+		dd	.op_pollwait
+		dd	.op_getbrk
+		dd	.op_pinop
+		dd	.op_testp
+		dd	.op_pushpop
+		dd	.op_xlat
+		dd	.op_akpin
+		dd	.op_asmclk
+		dd	.op_nop
+		dd	.op_debug
+
+
+.op_ds:	call	.tryd		;inst d,s/#
 		call	get_comma
-		jmp	@@trys_imm
+		jmp		.trys_imm
 
 
-@@op_bitx:	call	@@tryd			;inst d,s/# {wc,wz or none)
+.op_bitx:	call	.tryd		;inst d,s/# {wc,wz or none)
 		call	get_comma
-		call	@@trys_imm
-		jmp	@@get_wcwz
+		call		.trys_imm
+		jmp		.get_wcwz
 
 
-@@op_testb:	call	@@tryd			;inst d,s/# (wc/andc/orc/xorc or wz/andz/orz/xorz}
+.op_testb:	call	.tryd		;inst d,s/# (wc/andc/orc/xorc or wz/andz/orz/xorz}
 		call	get_comma
-		call	@@trys_imm
-		call	@@get_corz
+		call		.trys_imm
+		call		.get_corz
 		shl	ebx,22
 		or	ecx,ebx
 		ret
 
-@@op_du:	call	@@tryd			;inst d,s/# / inst d (unary)
+.op_du:	call	.tryd		;inst d,s/# / inst d (unary)
 		call	check_comma
-		je	@@trys_imm
+		je		.trys_imm
 		mov	eax,ecx
 		shr	eax,9
 		and	eax,1FFh
@@ -4262,169 +4269,169 @@ compile_dat:	mov	eax,[obj_ptr]		;save obj_ptr
 		ret
 
 
-@@op_duii:	call	@@tryd			;inst d,s/# / inst d (alti)
+.op_duii:	call	.tryd		;inst d,s/# / inst d (alti)
 		call	check_comma
-		je	@@trys_imm
+		je		.trys_imm
 		or	ecx,(1 shl 18) + 101100100b
 		ret
 
 
-@@op_duiz:	call	@@tryd			;inst d,s/# / inst d
+.op_duiz:	call	.tryd		;inst d,s/# / inst d
 		call	check_comma
-		je	@@trys_imm
+		je		.trys_imm
 		or	ecx,1 shl 18
 		ret
 
 
-@@op_ds3set:	call	@@trys_imm		;inst d,s/#,#0..7 / inst s/#
+.op_ds3set:	call	.trys_imm	;inst d,s/#,#0..7 / inst s/#
 		test	ecx,1 shl 18
-		jne	@@op_dsx_done
+		jne		.op_dsx_done
 		call	check_comma
-		jne	@@op_dsx_done
+		jne		.op_dsx_done
 		mov	eax,ecx			;get s into d
 		and	ecx,0FFFFFE00h
 		and	eax,1FFh
 		shl	eax,9
 		or	ecx,eax
-		jmp	@@op_ds3x
+		jmp		.op_ds3x
 
 
-@@op_ds3get:	call	@@tryd			;inst d,s/#,#0..7 / inst d
+.op_ds3get:	call	.tryd		;inst d,s/#,#0..7 / inst d
 		call	check_comma
-		jne	@@op_dsx_done
-@@op_ds3x:	call	@@trys_imm
+		jne		.op_dsx_done
+.op_ds3x:	call		.trys_imm
 		call	get_comma
 		call	get_pound
-		call	@@tryvalueint
+		call		.tryvalueint
 		cmp	ebx,111b
 		ja	error_smb0t7
-		jmp	@@op_ds1_done
+		jmp		.op_ds1_done
 
 
-@@op_ds2set:	call	@@trys_imm		;inst d,s/#,#0..3 / inst s/#
+.op_ds2set:	call	.trys_imm	;inst d,s/#,#0..3 / inst s/#
 		test	ecx,1 shl 18
-		jne	@@op_dsx_done
+		jne		.op_dsx_done
 		call	check_comma
-		jne	@@op_dsx_done
+		jne		.op_dsx_done
 		mov	eax,ecx			;get s into d
 		and	ecx,0FFFFFE00h
 		and	eax,1FFh
 		shl	eax,9
 		or	ecx,eax
-		jmp	@@op_ds2x
+		jmp		.op_ds2x
 
 
-@@op_ds2get:	call	@@tryd			;inst d,s/#,#0..3 / inst d
+.op_ds2get:	call	.tryd		;inst d,s/#,#0..3 / inst d
 		call	check_comma
-		jne	@@op_dsx_done
-@@op_ds2x:	call	@@trys_imm
+		jne		.op_dsx_done
+.op_ds2x:	call		.trys_imm
 		call	get_comma
 		call	get_pound
-		call	@@tryvalueint
+		call		.tryvalueint
 		cmp	ebx,11b
 		ja	error_smb0t3
-		jmp	@@op_ds1_done
+		jmp		.op_ds1_done
 
 
-@@op_ds1set:	call	@@trys_imm		;inst d,s/#,#0..1 / inst s/#
+.op_ds1set:	call	.trys_imm	;inst d,s/#,#0..1 / inst s/#
 		test	ecx,1 shl 18
-		jne	@@op_dsx_done
+		jne		.op_dsx_done
 		call	check_comma
-		jne	@@op_dsx_done
+		jne		.op_dsx_done
 		mov	eax,ecx			;get s into d
 		and	ecx,0FFFFFE00h
 		and	eax,1FFh
 		shl	eax,9
 		or	ecx,eax
-		jmp	@@op_ds1x
+		jmp		.op_ds1x
 
 
-@@op_ds1get:	call	@@tryd			;inst d,s/#,#0..1 / inst d
+.op_ds1get:	call	.tryd		;inst d,s/#,#0..1 / inst d
 		call	check_comma
-		jne	@@op_dsx_done
-@@op_ds1x:	call	@@trys_imm
+		jne		.op_dsx_done
+.op_ds1x:	call		.trys_imm
 		call	get_comma
 		call	get_pound
-		call	@@tryvalueint
+		call		.tryvalueint
 		cmp	ebx,1b
 		ja	error_smb0t1
-@@op_ds1_done:	shl	ebx,19
+.op_ds1_done:	shl	ebx,19
 		or	ecx,ebx
-@@op_dsx_done:	ret
+.op_dsx_done:	ret
 
 
-@@op_dsj:	call	@@tryd			;inst d,s/@
+.op_dsj:	call	.tryd		;inst d,s/@
 		call	get_comma
-		jmp	@@trys_rel
+		jmp		.trys_rel
 
 
-@@op_ls:	mov	edx,1 shl 19		;inst d/#,s/#
-		call	@@tryd_imm
+.op_ls:	mov	edx,1 shl 19		;inst d/#,s/#
+		call		.tryd_imm
 		call	get_comma
-		jmp	@@trys_imm
+		jmp		.trys_imm
 
 
-@@op_lsj:	mov	edx,1 shl 19		;inst d/#,s/@
-		call	@@tryd_imm
+.op_lsj:	mov	edx,1 shl 19		;inst d/#,s/@
+		call		.tryd_imm
 		call	get_comma
-		jmp	@@trys_rel
+		jmp		.trys_rel
 
 
-@@op_dsp:	call	@@tryd			;inst d,s/#/ptra/ptrb
+.op_dsp:	call	.tryd		;inst d,s/#/ptra/ptrb
 		call	get_comma
-		call	@@chkpab
-		jnc	@@trys_imm_pab
+		call		.chkpab
+		jnc		.trys_imm_pab
 		or	ecx,edx
 		ret
 
 
-@@op_lsp:	mov	edx,1 shl 19		;inst d/#,s/#/ptra/ptrb
-		call	@@tryd_imm
+.op_lsp:	mov	edx,1 shl 19		;inst d/#,s/#/ptra/ptrb
+		call		.tryd_imm
 		call	get_comma
-		call	@@chkpab
-		jnc	@@trys_imm_pab
+		call		.chkpab
+		jnc		.trys_imm_pab
 		or	ecx,edx
 		ret
 
 
-@@op_rep:	call	check_at		;check @
-		jne	@@op_ls			;if not @, handle d/#,s/#
+.op_rep:	call	check_at		;check @
+		jne	.op_ls		;if not @, handle d/#,s/#
 		or	ecx,1 shl 19		;set d-immediate bit
-		call	@@tryvalueint		;@, get cog/lut address
+		call	.tryvalueint	;@, get cog/lut address
 		push	ebx			;save address
 		call	get_comma		;get comma
-		call	@@trys_imm		;get s (may be ##)
+		call	.trys_imm	;get s (may be ##)
 		pop	ebx			;restore address
-		cmp	[@@pass],0		;if pass 0, don't qualify address
-		je	@@op_rep_pass0
+		cmp	[.@pass],0		;if pass 0, don't qualify address
+		je		.op_rep_pass0
 		cmp	[orgh],1		;orgh or cog mode?
-		je	@@op_rep_hub
+		je		.op_rep_hub
 		shl	ebx,2			;cog, get delta
 		sub	ebx,[cog_org]
-		jmp	@@op_rep_set
-@@op_rep_hub:	sub	ebx,[hub_org]		;hub, get delta
-@@op_rep_set:	test	bl,11b			;test common alignment
+		jmp		.op_rep_set
+.op_rep_hub:	sub	ebx,[hub_org]		;hub, get delta
+.op_rep_set:	test	bl,11b			;test common alignment
 		jnz	error_rbeiooa
 		shr	ebx,2			;make into rep d value
 		sub	ebx,1
 		cmp	ebx,1FFh		;make sure not out of range
 		ja	error_rbeioor
-		call	@@installd
-@@op_rep_pass0:	ret
+		call		.installd
+.op_rep_pass0:	ret
 
 
-@@op_jmp:	call	check_pound		;jmp # <or> jmp d
-		je	@@op_calli
+.op_jmp:	call	check_pound		;jmp # <or> jmp d
+		je		.op_calli
 
 		and	ecx,0F0000000h		;reg, preserve conditional bits
 		or	ecx,00D60002Ch		;make 'jmp d' instruction
-		call	@@tryd			;get d register
-		mov	[@@effectbits],11b	;enable effects
+		call	.tryd		;get d register
+		mov	[.@effectbits],11b	;enable effects
 		ret
 
 
-@@op_call:	call	check_pound		;call/calla/callb # <or> call/calla/callb d
-		je	@@op_calli
+.op_call:	call	check_pound		;call/calla/callb # <or> call/calla/callb d
+		je		.op_calli
 
 		mov	eax,ecx			;reg, make 'call/calla/callb d' instruction
 		shr	eax,21
@@ -4432,106 +4439,106 @@ compile_dat:	mov	eax,[obj_ptr]		;save obj_ptr
 		add	eax,00D60002Ch
 		and	ecx,0F0000000h		;preserve conditional bits
 		or	ecx,eax
-		call	@@tryd			;get d register
-		mov	[@@effectbits],11b	;enable effects
+		call	.tryd		;get d register
+		mov	[.@effectbits],11b	;enable effects
 		ret
 
-@@op_calli:	call	@@tryir			;determine immediate or relative address
-		jnc	@@op_calli_abs
+.op_calli:	call	.tryir		;determine immediate or relative address
+		jnc		.op_calli_abs
 
 		mov	eax,[hub_org]		;cog or hub?
 		cmp	[orgh],1
-		je	@@op_calli_hub
+		je		.op_calli_hub
 		mov	eax,[cog_org]
 		shl	ebx,2
-@@op_calli_hub:	add	eax,4			;compute relative address
+.op_calli_hub:	add	eax,4			;compute relative address
 		sub	ebx,eax
 		or	ecx,1 shl 20		;set relative address bit
-@@op_calli_abs:	and	ebx,0FFFFFh		;install relative address
+.op_calli_abs:	and	ebx,0FFFFFh		;install relative address
 		or	ecx,ebx
 		ret
 
 
-@@op_calld:	call	@@tryvaluereg		;'calld 1F6h..1F9h,#{\}adr20' <or> 'calld d,s/#rel9', get d
+.op_calld:	call	.tryvaluereg	;'calld 1F6h..1F9h,#{\}adr20' <or> 'calld d,s/#rel9', get d
 		mov	edx,ebx			;save d
 		call	get_comma		;get comma
 		call	check_pound		;check for #
-		je	@@op_calld_i
+		je		.op_calld_i
 
-		call	@@tryvaluereg		;no #, 'call d,s', get s register
+		call	.tryvaluereg	;no #, 'call d,s', get s register
 		and	ecx,0F0000000h		;preserve conditional bits
 		or	ecx,00B200000h		;make 'calld d,s' instruction
-@@op_calld_r9:	shl	edx,9			;install d
+.op_calld_r9:	shl	edx,9			;install d
 		or	ecx,edx
 		or	ecx,ebx			;install s
-		mov	[@@effectbits],11b	;enable effects
+		mov	[.@effectbits],11b	;enable effects
 		ret
 
-@@op_calld_i:	call	@@tryir			;#, determine immediate or relative address
-		jc	@@op_calld_ir
+.op_calld_i:	call	.tryir		;#, determine immediate or relative address
+		jc		.op_calld_ir
 
-		cmp	[@@pass],0		;#, immediate address, if pass 0, skip test
-		je	@@op_calld_ret
+		cmp	[.@pass],0		;#, immediate address, if pass 0, skip test
+		je		.op_calld_ret
 		cmp	edx,1F6h		;make sure d from 1F6h to 1F9h
 		jb	error_drmbpppp
 		cmp	edx,1F9h
 		ja	error_drmbpppp
-@@op_calld_i20:	and	edx,11b			;install into mini d field
+.op_calld_i20:	and	edx,11b			;install into mini d field
 		xor	edx,10b
 		shl	edx,21
 		or	ecx,edx
 		and	ebx,0FFFFFh		;install address
 		or	ecx,ebx
-@@op_calld_ret:	ret
+.op_calld_ret:	ret
 
-@@op_calld_ir:	cmp	[@@pass],0		;#, relative address, if pass 0, skip test
-		je	@@op_calld_ret
+.op_calld_ir:	cmp	[.@pass],0		;#, relative address, if pass 0, skip test
+		je		.op_calld_ret
 
 		cmp	[orgh],1		;cog or hub mode?
-		je	@@op_calld_irh
+		je		.op_calld_irh
 
 		mov	eax,[cog_org]		;cog mode, check rel9 address
 		shr	eax,2
 		add	eax,1
 		sub	ebx,eax
-		jmp	@@op_calld_ir9
+		jmp		.op_calld_ir9
 
-@@op_calld_irh:	mov	eax,[hub_org]		;hub mode, check rel9 address
+.op_calld_irh:	mov	eax,[hub_org]		;hub mode, check rel9 address
 		add	eax,4
 		sub	ebx,eax
 		test	ebx,11b
-		jnz	@@op_calld_nr9
+		jnz		.op_calld_nr9
 		sar	ebx,2
 
-@@op_calld_ir9:	cmp	ebx,0FFh
-		jg	@@op_calld_nr9
+.op_calld_ir9:	cmp	ebx,0FFh
+		jg		.op_calld_nr9
 		cmp	ebx,0FFFFFF00h
-		jl	@@op_calld_nr9
+		jl		.op_calld_nr9
 		and	ebx,1FFh		;make rel9 address
 		and	ecx,0F0000000h		;preserve conditional bits
 		or	ecx,00B240000h		;make 'calld d,#s' instruction
-		jmp	@@op_calld_r9
+		jmp		.op_calld_r9
 
-@@op_calld_nr9:	cmp	edx,1F6h		;if 1F6h..1F9h, make 20-bit calld
+.op_calld_nr9:	cmp	edx,1F6h		;if 1F6h..1F9h, make 20-bit calld
 		jb	error_drmbpppp
 		cmp	edx,1F9h
 		ja	error_drmbpppp
 		or	ecx,1 shl 20		;set relative address bit in case 20-bit address
-		jmp	@@op_calld_i20
+		jmp		.op_calld_i20
 
 
-@@op_jpoll:	mov	eax,ecx			;jint..jnqmt s/#
+.op_jpoll:	mov	eax,ecx			;jint..jnqmt s/#
 		and	eax,0FF80000h
 		shr	eax,19-9
 		and	ecx,0F0000000h
 		or	ecx,eax
 		or	ecx,0BC80000h
-		jmp	@@trys_rel
+		jmp		.trys_rel
 
 
-@@op_loc:	call	@@tryvaluereg		;loc reg,#
-		cmp	[@@pass],0
-		je	@@op_locs
+.op_loc:	call	.tryvaluereg	;loc reg,#
+		cmp	[.@pass],0
+		je		.op_locs
 		cmp	ebx,1F6h		;validate reg
 		jb	error_drmbpppp
 		cmp	ebx,1F9h
@@ -4540,79 +4547,79 @@ compile_dat:	mov	eax,[obj_ptr]		;save obj_ptr
 		xor	ebx,10b
 		shl	ebx,21
 		or	ecx,ebx	
-@@op_locs:	call	get_comma		;get ','
+.op_locs:	call	get_comma		;get ','
 		call	get_pound		;get '#'
 		call	check_back		;check for '\'
 		pushf
 		mov	[orgh_symbol_flag],0	;get address
-		call	@@tryvalueint
+		call		.tryvalueint
 		mov	al,[orgh_symbol_flag]
 		cmp	ebx,0FFFFFh		;validate address
 		ja	error_amnex
 		popf
-		je	@@op_locabs		;if '\', absolute
+		je	.op_locabs	;if '\', absolute
 		cmp	ebx,400h
-		jb	@@op_loccog		;	orgh	orgh_symbol_flag | address >= $400
+		jb	.op_loccog	;	orgh	orgh_symbol_flag | address >= $400
 		or	al,1			;	-----------------------------------------------
-@@op_loccog:	xor	al,[orgh]		;	0	0	relative, address-(cog_org/4+1)
-		jnz	@@op_locabs		;	0	1	absolute
+.op_loccog:	xor	al,[orgh]		;	0	0	relative, address-(cog_org/4+1)
+		jnz	.op_locabs	;	0	1	absolute
 		mov	eax,[hub_org]		;	1	0	absolute
 		add	eax,4			;	1	1	relative, address-(hub_org+4)
 		cmp	[orgh],1
-		je	@@op_locrelh
+		je		.op_locrelh
 		mov	eax,[cog_org]
 		shr	eax,2
 		add	eax,1
-@@op_locrelh:	sub	ebx,eax			;compute relative address
+.op_locrelh:	sub	ebx,eax			;compute relative address
 		or	ecx,1 shl 20		;set relative address bit
-@@op_locabs:	and	ebx,0FFFFFh		;install address
+.op_locabs:	and	ebx,0FFFFFh		;install address
 		or	ecx,ebx
 		ret
 
 
-@@op_aug:	call	get_pound		;get #
-		call	@@tryvalueint		;get constant
-		jmp	@@augcon		;insert constant bits 31..9
+.op_aug:	call	get_pound		;get #
+		call	.tryvalueint	;get constant
+		jmp	.augcon	;insert constant bits 31..9
 
 
-@@op_d:		jmp	@@tryd			;inst d
+.op_d:		jmp	.tryd		;inst d
 
 
-@@op_de:	call	get_element		;inst d and/or effects
+.op_de:	call	get_element		;inst d and/or effects
 		call	back_element
 		cmp	al,type_asm_effect	;if asm effect first, set immediate bit to inhibit write
-		jne	@@op_d
+		jne		.op_d
 		or	ecx,1 shl 18
 		ret
 
 
-@@op_l:		mov	edx,1 shl 18		;inst d/#0..511
-		jmp	@@tryd_imm
+.op_l:		mov	edx,1 shl 18		;inst d/#0..511
+		jmp		.tryd_imm
 
 
-@@op_cz:	test	[@@effectbits],10b	;modcz/modc/modz
-		jz	@@op_z			;modz?
+.op_cz:	test	[.@effectbits],10b	;modcz/modc/modz
+		jz	.op_z		;modz?
 
-		call	@@tryvalueint		;get cdata
+		call	.tryvalueint	;get cdata
 		and	ebx,0Fh			;set cdata
 		shl	ebx,9+4
 		or	ecx,ebx
 
-		test	[@@effectbits],01b	;modc?
-		jz	@@op_c
+		test	[.@effectbits],01b	;modc?
+		jz		.op_c
 
 		call	get_comma		;modcz, get comma
 
-@@op_z:		call	@@tryvalueint		;get zdata
+.op_z:		call	.tryvalueint	;get zdata
 		and	ebx,0Fh			;set zdata
 		shl	ebx,9+0
 		or	ecx,ebx
 
-@@op_c:		or	ecx,1 shl 18		;set immediate bit
+.op_c:		or	ecx,1 shl 18		;set immediate bit
 		ret
 
 
-@@op_pollwait:	mov	eax,ecx			;pollxxx/waitxxx <blank>
+.op_pollwait:	mov	eax,ecx			;pollxxx/waitxxx <blank>
 		and	eax,1FFh		;get s into d
 		shl	eax,9
 		or	ecx,eax
@@ -4621,44 +4628,44 @@ compile_dat:	mov	eax,[obj_ptr]		;save obj_ptr
 		ret
 
 
-@@op_getbrk:	mov	edx,1 shl 18		;getbrk d wc/wz/wcz
-		call	@@tryd_imm
-		jmp	@@get_wcwzwcz
+.op_getbrk:	mov	edx,1 shl 18		;getbrk d wc/wz/wcz
+		call		.tryd_imm
+		jmp		.get_wcwzwcz
 
 
-@@op_pinop:	mov	edx,1 shl 18		;pinop d/#0..511 (wc,wz or none)
-		call	@@tryd_imm
-		jmp	@@get_wcwz
+.op_pinop:	mov	edx,1 shl 18		;pinop d/#0..511 (wc,wz or none)
+		call		.tryd_imm
+		jmp		.get_wcwz
 
 
-@@op_testp:	mov	edx,1 shl 18		;testp d/#0..511 (wc/andc/orc/xorc or wz/andz/orz/xorz}
-		call	@@tryd_imm
-		call	@@get_corz
+.op_testp:	mov	edx,1 shl 18		;testp d/#0..511 (wc/andc/orc/xorc or wz/andz/orz/xorz}
+		call		.tryd_imm
+		call		.get_corz
 		shl	ebx,1
 		or	ecx,ebx
 		ret
 
 
-@@op_pushpop:	movzx	eax,cl			;push/pop
+.op_pushpop:	movzx	eax,cl			;push/pop
 		and	ecx,0F0000000h		;preserve conditional bits
-		or	ecx,[@@pushpop+eax*4]	;or in push/pop instruction
+		or	ecx,[.@pushpop+eax*4]	;or in push/pop instruction
 		cmp	al,pp_popa		;get d/# or d
-		jae	@@tryd
+		jae		.tryd
 		mov	edx,1 shl 19
-		jmp	@@tryd_imm
+		jmp		.tryd_imm
 
-@@pushpop	dd	0C640161h		;PUSHA	D/#	-->	WRLONG	D/#,PTRA++
+.@pushpop	dd	0C640161h		;PUSHA	D/#	-->	WRLONG	D/#,PTRA++
 		dd	0C6401E1h		;PUSHB	D/#	-->	WRLONG	D/#,PTRB++
 		dd	0B04015Fh		;POPA	D	-->	RDLONG	D,--PTRA
 		dd	0B0401DFh		;POPB	D	-->	RDLONG	D,--PTRB
 
 
-@@op_xlat:	movzx	eax,cl			;get index number
+.op_xlat:	movzx	eax,cl			;get index number
 		and	ecx,0F0000000h		;preserve conditional bits
-		or	ecx,[@@xlat+eax*4]	;or in instruction
+		or	ecx,[.@xlat+eax*4]	;or in instruction
 		ret
 
-@@xlat		dd	0D64002Dh		;RET
+.@xlat		dd	0D64002Dh		;RET
 		dd	0D64002Eh		;RETA
 		dd	0D64002Fh		;RETB
 		dd	0B3BFFFFh		;RETI0		-->	CALLD	INB,INB		WCZ
@@ -4672,81 +4679,81 @@ compile_dat:	mov	eax,[obj_ptr]		;save obj_ptr
 		dd	0CAC0000h		;XSTOP		-->	XINIT	#0,#0
 
 
-@@op_akpin:	and	ecx,0F0000000h		;akpin s/#, preserve conditional bits
+.op_akpin:	and	ecx,0F0000000h		;akpin s/#, preserve conditional bits
 		or	ecx,00C080200h		;wrpin #1,s/#
-		jmp	@@trys_imm
+		jmp		.trys_imm
 
 
-@@op_asmclk:	mov	ebx,[clkmode]		;asmclk, check if rcfast/rcslow
+.op_asmclk:	mov	ebx,[clkmode]		;asmclk, check if rcfast/rcslow
 		test	bl,10b
-		jnz	@@asmclkxin
+		jnz		.asmclkxin
 		and	ebx,1
 		shl	ebx,9
 		or	ecx,ebx
 		or	ecx,0D640000h		;rcfast/rcslow, assemble 'hubset #0/1'
 		ret
 
-@@asmclkxin:	and	ebx,0FFFFFFFCh		;assemble 'hubset ##clkmode & !3'
+.asmclkxin:	and	ebx,0FFFFFFFCh		;assemble 'hubset ##clkmode & !3'
 		stc
-		call	@@augds
+		call		.augds
 		push	ecx
-		call	@@augret		;handle conditional field
+		call	.augret	;handle conditional field
 		shl	ebx,9
 		or	ecx,ebx
 		or	ecx,0D640000h
-		call	@@enterlong
+		call		.enterlong
 		pop	ecx
 		mov	ebx,20000000/100	;assemble 'waitx ##20_000_000/100'
 		stc
-		call	@@augds
+		call		.augds
 		push	ecx
-		call	@@augret		;handle conditional field
+		call	.augret	;handle conditional field
 		shl	ebx,9
 		or	ecx,ebx
 		or	ecx,0D64001Fh
-		call	@@enterlong
+		call		.enterlong
 		pop	ecx
 		mov	ebx,[clkmode]		;assemble 'hubset ##clkmode'
 		stc
-		call	@@augds
+		call		.augds
 		shl	ebx,9
 		or	ecx,ebx
 		or	ecx,0D640000h
 		ret
 
 
-@@op_nop:	shr	ecx,32-4		;nop, condition is not allowed
+.op_nop:	shr	ecx,32-4		;nop, condition is not allowed
 		cmp	cl,0Fh
 		jne	error_nchcor
 		mov	ecx,0			;nop
 		ret
 
 
-@@op_debug:	mov	eax,ecx			;DEBUG, _ret_ is okay, but condition is not allowed
+.op_debug:	mov	eax,ecx			;DEBUG, _ret_ is okay, but condition is not allowed
 		shr	eax,32-4
-		jz	@@debugretok
+		jz		.debugretok
 		cmp	al,0Fh
 		jne	error_dcbpbac
-@@debugretok:
+.debugretok:
 		cmp	[debug_mode],0		;if debug disabled, ignore rest of line and emit nothing
-		jnz	@@debugon
+		jnz		.debugon
 		call	scan_to_end		;scan to end of line
 		call	get_end			;get end
 		pop	eax			;pop return address so no long is emitted
-		jmp	@@nextline		;get next line
-@@debugon:
+		jmp	.nextline	;get next line
+.debugon:
 		call	check_left		;check for '('
-		je	@@debugleft
+		je		.debugleft
 
 		and	ecx,0FFFFFFFFh		;no parameters, assemble 'BRK #0' for debugger
 		or	ecx,00D640036h
 		call	get_end			;make sure eol
 		jmp	back_element
 
-@@debugleft:	cmp	[@@pass],0		;parameters, if pass 0, skip parameters and emit long
-		jne	@@debugpass1
+.debugleft:	cmp	[.@pass],0		;parameters, if pass 0, skip parameters and emit long
+		jne		.debugpass1
 		jmp	scan_to_end		;scan to end of line
-@@debugpass1:
+.debugpass1:
 		push	ecx			;pass 1
 		call	ci_debug_asm		;compile debug for asm, returns BRK index in al
 		pop	ecx
@@ -4758,41 +4765,41 @@ compile_dat:	mov	eax,[obj_ptr]		;save obj_ptr
 		jmp	back_element		;back up for assembler
 
 
-@@asmlocal:	or	dl,dl			;if not local symbol, inc asm local
-		jns	@@asmlocal2
+.asmlocal:	or	dl,dl			;if not local symbol, inc asm local
+		jns		.asmlocal2
 
-		inc	[byte asm_local+3]
-		cmp	[byte asm_local+3],3Ah
-		jne	@@asmlocal2
-		mov	[byte asm_local+3],30h
+		inc	byte [asm_local+3]
+		cmp	byte [asm_local+3],3Ah
+		jne		.asmlocal2
+		mov	byte [asm_local+3],30h
 
-		inc	[byte asm_local+2]
-		cmp	[byte asm_local+2],3Ah
-		jne	@@asmlocal2
-		mov	[byte asm_local+2],30h
+		inc	byte [asm_local+2]
+		cmp	byte [asm_local+2],3Ah
+		jne		.asmlocal2
+		mov	byte [asm_local+2],30h
 
-		inc	[byte asm_local+1]
-		cmp	[byte asm_local+1],3Ah
-		jne	@@asmlocal2
-		mov	[byte asm_local+1],30h
+		inc	byte [asm_local+1]
+		cmp	byte [asm_local+1],3Ah
+		jne		.asmlocal2
+		mov	byte [asm_local+1],30h
 
-		inc	[byte asm_local+0]
-		cmp	[byte asm_local+0],3Ah
-		jne	@@asmlocal2
-		mov	[byte asm_local+0],30h
+		inc	byte [asm_local+0]
+		cmp	byte [asm_local+0],3Ah
+		jne		.asmlocal2
+		mov	byte [asm_local+0],30h
 
 		jmp	error_loxdse
 
-@@asmlocal2:	ret
+.asmlocal2:	ret
 
 
-@@entersymbol:	or	edx,edx			;enter any symbol as type_dat_????
-		jns	@@ret
+.entersymbol:	or	edx,edx			;enter any symbol as type_dat_????
+		jns		.ret
 		push	ebx
 		mov	ebx,[obj_ptr]		;obj ptr in low bits
 		or	ebx,0FFF00000h		;flag orgh by 0FFFh in high bits
 		cmp	[orgh],1		;if orgh mode, got value
-		je	@@entersymbol2
+		je		.entersymbol2
 		mov	eax,[cog_org]		;get cog org in high word
 		test	al,11b			;make sure long aligned
 		jnz	error_csmbla
@@ -4800,81 +4807,81 @@ compile_dat:	mov	eax,[obj_ptr]		;save obj_ptr
 		shl	eax,32-12
 		and	ebx,000FFFFFh
 		or	ebx,eax
-@@entersymbol2:	mov	al,[@@size]		;adjust type by size
-		mov	[byte inf_data1],al	;enter dat symbol info
+.entersymbol2:	mov	al,[.@size]		;adjust type by size
+		mov	byte [inf_data1],al	;enter dat symbol info
 		mov	[inf_data0],ebx
 		mov	[inf_type],info_dat_symbol
 		add	al,type_dat_byte
 		call	enter_info
 		test	edx,40000000h		;check for res symbol
-		jz	@@entersymbol3
+		jz		.entersymbol3
 		mov	al,type_dat_long_res
-@@entersymbol3:	call	enter_symbol2_print	;enter symbol
+.entersymbol3:	call	enter_symbol2_print	;enter symbol
 		pop	ebx
 		ret
 
 
-@@nosymbol:	or	edx,edx			;make sure no symbol
+.nosymbol:	or	edx,edx			;make sure no symbol
 		js	error_tdcbpbas
 		ret
 
 
-@@coglong:	cmp	[orgh],0		;if cog mode, advance to next long
-		jne	@@ret
+.coglong:	cmp	[orgh],0		;if cog mode, advance to next long
+		jne		.ret
 		push	ecx
 		mov	ecx,[cog_org]
 		neg	ecx
 		and	ecx,11b
 		xor	ebx,ebx
 		mov	dl,0
-		call	@@enter
+		call		.enter
 		pop	ecx
 		ret
 
 
-@@enterlong:	mov	ebx,ecx			;enter instruction in ecx
+.enterlong:	mov	ebx,ecx			;enter instruction in ecx
 		mov	ecx,1
 		mov	dl,2
 
-@@enter:	jecxz	@@ret			;enter ebx value ecx times, using dl size
+.enter:	jecxz	.ret		;enter ebx value ecx times, using dl size
 
-		cmp	[@@sizefit],0		;size fit enabled?
-		je	@@enter2
+		cmp	[.@sizefit],0		;size fit enabled?
+		je		.enter2
 
 		cmp	dl,1			;check size range
-		ja	@@enter2		;long?
-		jne	@@enterb		;byte?
+		ja	.enter2	;long?
+		jne	.enterb	;byte?
 
 		cmp	ebx,0FFFF8000h		;word
-		jl	@@enterwerr
+		jl		.enterwerr
 		cmp	ebx,0FFFFh
-		jle	@@enter2
-@@enterwerr:	jmp	error_wmbft
+		jle		.enter2
+.enterwerr:	jmp	error_wmbft
 
-@@enterb:	cmp	ebx,0FFFFFF80h		;byte
-		jl	@@enterberr
+.enterb:	cmp	ebx,0FFFFFF80h		;byte
+		jl		.enterberr
 		cmp	ebx,0FFh
-		jle	@@enter2
-@@enterberr:	jmp	error_bmbft
+		jle		.enter2
+.enterberr:	jmp	error_bmbft
 
-@@enter2:	push	ecx
+.enter2:	push	ecx
 		mov	cl,dl
 		mov	dh,1
 		shl	dh,cl
 		pop	ecx
 		mov	eax,ebx
-@@enter3:	call	@@enterbyte
+.enter3:	call		.enterbyte
 		shr	eax,8
 		dec	dh
-		jnz	@@enter3
-		loop	@@enter2
-@@ret:		ret
+		jnz		.enter3
+		loop	 .enter2
+.ret:		ret
 
 
-@@enterbyte:	call	enter_obj		;enter byte into obj
+.enterbyte:	call	enter_obj		;enter byte into obj
 
 		cmp	[orgh],0		;orgh mode?
-		jne	@@enterbyteh
+		jne		.enterbyteh
 
 		inc	[cog_org]		;else, increment org
 		push	eax			;limit exceeded?
@@ -4884,7 +4891,7 @@ compile_dat:	mov	eax,[obj_ptr]		;save obj_ptr
 		ja	error_cael
 		ret
 
-@@enterbyteh:	inc	[hub_org]		;else, increment org
+.enterbyteh:	inc	[hub_org]		;else, increment org
 		push	eax			;limit exceeded?
 		mov	eax,[hub_org_limit]
 		cmp	[hub_org],eax
@@ -4893,168 +4900,168 @@ compile_dat:	mov	eax,[obj_ptr]		;save obj_ptr
 		ret
 
 
-@@tryvalue:	mov	bl,[@@pass]		;try operand - integer or float
+.tryvalue:	mov	bl,[.@pass]		;try operand - integer or float
 		xor	bl,11b			;if second pass, must resolve
 		jmp	try_value
 
 
-@@tryvalueint:	mov	bl,[@@pass]		;try operand - integer only
+.tryvalueint:	mov	bl,[.@pass]		;try operand - integer only
 		xor	bl,11b			;if second pass, must resolve
 		jmp	try_value_int
 
 
-@@getvalueint:	mov	bl,10b			;get operand - integer only
+.getvalueint:	mov	bl,10b			;get operand - integer only
 		jmp	try_value_int
 
 
-@@checkinst:	cmp	al,type_asm_inst	;asm instruction? z=1 if true
-		je	@@checkdone
+.checkinst:	cmp	al,type_asm_inst	;asm instruction? z=1 if true
+		je		.checkdone
 		cmp	al,type_op		;operator alias?
-		je	@@checkop
+		je		.checkop
 		cmp	al,type_i_flex		;spin instruction alias
-		je	@@checkflex
+		je		.checkflex
 		cmp	al,type_debug		;DEBUG ?
-		je	@@gotdebug
-		jmp	@@checkdone
+		je		.gotdebug
+		jmp		.checkdone
 
-@@checkflex:	push	eax
+.checkflex:	push	eax
 		mov	eax,ac_hubset		;HUBSET ?
 		cmp	ebx,fc_hubset
-		je	@@checkok
+		je		.checkok
 		mov	eax,ac_coginit		;COGINIT ?
 		cmp	ebx,fc_coginit
-		je	@@checkok
+		je		.checkok
 		mov	eax,ac_cogstop		;COGSTOP ?
 		cmp	ebx,fc_cogstop
-		je	@@checkok
+		je		.checkok
 		mov	eax,ac_cogid		;COGID ?
 		cmp	ebx,fc_cogid
-		je	@@checkok
+		je		.checkok
 		mov	eax,ac_getrnd		;GETRND ?
 		cmp	ebx,fc_getrnd
-		je	@@checkok
+		je		.checkok
 		mov	eax,ac_getct		;GETCT ?
 		cmp	ebx,fc_getct
-		je	@@checkok
+		je		.checkok
 		mov	eax,ac_wrpin		;WRPIN ?
 		cmp	ebx,fc_wrpin
-		je	@@checkok
+		je		.checkok
 		mov	eax,ac_wxpin		;WXPIN ?
 		cmp	ebx,fc_wxpin
-		je	@@checkok
+		je		.checkok
 		mov	eax,ac_wypin		;WYPIN ?
 		cmp	ebx,fc_wypin
-		je	@@checkok
+		je		.checkok
 		mov	eax,ac_akpin		;AKPIN ?
 		cmp	ebx,fc_akpin
-		je	@@checkok
+		je		.checkok
 		mov	eax,ac_rdpin		;RDPIN ?
 		cmp	ebx,fc_rdpin
-		je	@@checkok
+		je		.checkok
 		mov	eax,ac_rqpin		;RQPIN ?
 		cmp	ebx,fc_rqpin
-		je	@@checkok
+		je		.checkok
 		mov	eax,ac_locknew		;LOCKNEW ?
 		cmp	ebx,fc_locknew
-		je	@@checkok
+		je		.checkok
 		mov	eax,ac_lockret		;LOCKRET ?
 		cmp	ebx,fc_lockret
-		je	@@checkok
+		je		.checkok
 		mov	eax,ac_locktry		;LOCKTRY ?
 		cmp	ebx,fc_locktry
-		je	@@checkok
+		je		.checkok
 		mov	eax,ac_lockrel		;LOCKREL ?
 		cmp	ebx,fc_lockrel
-		je	@@checkok
+		je		.checkok
 		mov	eax,ac_cogatn		;COGATN ?
 		cmp	ebx,fc_cogatn
-		je	@@checkok
+		je		.checkok
 		mov	eax,ac_pollatn		;POLLATN ?
 		cmp	ebx,fc_pollatn
-		je	@@checkok
+		je		.checkok
 		mov	eax,ac_waitatn		;WAITATN ?
 		cmp	ebx,fc_waitatn
-		je	@@checkok
+		je		.checkok
 		mov	eax,ac_call		;CALL ?
 		cmp	ebx,fc_call
-		je	@@checkok
-		jmp	@@checknot
+		je		.checkok
+		jmp		.checknot
 
-@@checkop:	push	eax
+.checkop:	push	eax
 		mov	eax,ac_abs		;ABS ?
 		cmp	bl,op_abs
-		je	@@checkok
+		je		.checkok
 		mov	eax,ac_encod		;ENCOD ?
 		cmp	bl,op_encod
-		je	@@checkok
+		je		.checkok
 		mov	eax,ac_decod		;DECOD ?
 		cmp	bl,op_decod
-		je	@@checkok
+		je		.checkok
 		mov	eax,ac_bmask		;BMASK ?
 		cmp	bl,op_bmask
-		je	@@checkok
+		je		.checkok
 		mov	eax,ac_ones		;ONES ?
 		cmp	bl,op_ones
-		je	@@checkok
+		je		.checkok
 		mov	eax,ac_qlog		;QLOG ?
 		cmp	bl,op_qlog
-		je	@@checkok
+		je		.checkok
 		mov	eax,ac_qexp		;QEXP ?
 		cmp	bl,op_qexp
-		je	@@checkok
+		je		.checkok
 		mov	eax,ac_sar		;SAR ?
 		cmp	bl,op_sar
-		je	@@checkok
+		je		.checkok
 		mov	eax,ac_ror		;ROR ?
 		cmp	bl,op_ror
-		je	@@checkok
+		je		.checkok
 		mov	eax,ac_rol		;ROL ?
 		cmp	bl,op_rol
-		je	@@checkok
+		je		.checkok
 		mov	eax,ac_rev		;REV ?
 		cmp	bl,op_rev
-		je	@@checkok
+		je		.checkok
 		mov	eax,ac_zerox		;ZEROX ?
 		cmp	bl,op_zerox
-		je	@@checkok
+		je		.checkok
 		mov	eax,ac_signx		;SIGNX ?
 		cmp	bl,op_signx
-		je	@@checkok
+		je		.checkok
 		mov	eax,ac_sca		;SCA ?
 		cmp	bl,op_sca
-		je	@@checkok
+		je		.checkok
 		mov	eax,ac_scas		;SCAS ?
 		cmp	bl,op_scas
-		je	@@checkok
+		je		.checkok
 		test	ebx,opc_alias		;make sure !!,&&,^^,|| are not masquerading as NOT,AND,XOR,OR
-		jnz	@@checknot
+		jnz		.checknot
 		mov	eax,ac_not		;NOT ?
 		cmp	bl,op_lognot
-		je	@@checkok
+		je		.checkok
 		mov	eax,ac_and		;AND ?
 		cmp	bl,op_logand
-		je	@@checkok
+		je		.checkok
 		mov	eax,ac_or		;OR ?
 		cmp	bl,op_logor
-		je	@@checkok
+		je		.checkok
 		mov	eax,ac_xor		;XOR ?
 		cmp	bl,op_logxor
-		jne	@@checknot
-@@checkok:	mov	ebx,eax
-@@checknot:	pop	eax
-@@checkdone:	ret
+		jne		.checknot
+.checkok:	mov	ebx,eax
+.checknot:	pop	eax
+.checkdone:	ret
 
-@@gotdebug:	mov	ebx,ac_debug		;DEBUG
+.gotdebug:	mov	ebx,ac_debug		;DEBUG
 		ret
 
 
-@@get_wcwzwcz:	call	get_element		;get wc/wz/wcz
+.get_wcwzwcz:	call	get_element		;get wc/wz/wcz
 		cmp	al,type_asm_effect	;if not flag effect, done
 		je	back_element
 		jmp	error_ewcwzwcz
 
 
-@@get_wcwz:	call	get_element		;get wcz or nothing
+.get_wcwz:	call	get_element		;get wcz or nothing
 		cmp	al,type_asm_effect	;if not flag effect, done
 		jne	back_element
 		cmp	bl,11b			;if not wcz, done
@@ -5063,14 +5070,14 @@ compile_dat:	mov	eax,[obj_ptr]		;save obj_ptr
 		ret
 
 
-@@get_corz:	call	get_element		;get wc/andc/orc/xorc or wz/andz/orz/xorz
+.get_corz:	call	get_element		;get wc/andc/orc/xorc or wz/andz/orz/xorz
 		cmp	al,type_asm_effect2
-		je	@@get_corz_wr
+		je		.get_corz_wr
 		cmp	al,type_asm_effect
 		jne	error_ewaox
 		cmp	bl,11b
 		je	error_ewaox
-@@get_corz_wr:	mov	al,bl			;got one, set wc or wz bit
+.get_corz_wr:	mov	al,bl			;got one, set wc or wz bit
 		and	eax,11b
 		shl	eax,19
 		or	ecx,eax
@@ -5078,42 +5085,42 @@ compile_dat:	mov	eax,[obj_ptr]		;save obj_ptr
 		ret
 
 
-@@tryd_imm:	call	check_pound		;try d operand, check for #/## (edx must hold imm bit)
-		jne	@@tryd			;if no #, try d
+.tryd_imm:	call	check_pound		;try d operand, check for #/## (edx must hold imm bit)
+		jne	.tryd		;if no #, try d
 		or	ecx,edx			;set immediate bit
 		call	check_pound		;check for ##
-		jne	@@tryd_imm9
-		call	@@tryvalueint		;##, get 32-bit constant
+		jne		.tryd_imm9
+		call	.tryvalueint	;##, get 32-bit constant
 		stc				;enter augd instruction
-		call	@@augds
-		jmp	@@installd
-@@tryd_imm9:	call	@@tryvaluecon		;#, get 9-bit constant
-		jmp	@@installd
+		call		.augds
+		jmp		.installd
+.tryd_imm9:	call	.tryvaluecon	;#, get 9-bit constant
+		jmp		.installd
 
 
-@@tryd:		call	@@tryvaluereg		;try d operand
-@@installd:	shl	ebx,9			;install into d field
+.tryd:		call	.tryvaluereg	;try d operand
+.installd:	shl	ebx,9			;install into d field
 		or	ecx,ebx
 		ret
 
 
-@@trys_rel:	call	check_pound		;try s operand, check for #
-		jne	@@trys
+.trys_rel:	call	check_pound		;try s operand, check for #
+		jne		.trys
 
 		call	check_pound		;check for ##
-		je	@@trys_rel32
+		je		.trys_rel32
 
 		or	ecx,1 shl 18		;relative address, set immediate bit
-		call	@@tryvalueint		;get relative address
-		cmp	[@@pass],0		;if pass 0, don't qualify address
-		je	@@trys_relx
-		call	@@checkcross		;check that address doesn't cross between cog/lut and hub
+		call	.tryvalueint	;get relative address
+		cmp	[.@pass],0		;if pass 0, don't qualify address
+		je		.trys_relx
+		call	.checkcross	;check that address doesn't cross between cog/lut and hub
 		mov	eax,[hub_org]		;hub or cog mode?
 		cmp	[orgh],1
-		je	@@trys_relh
+		je		.trys_relh
 		mov	eax,[cog_org]
 		shl	ebx,2
-@@trys_relh:	sub	ebx,eax
+.trys_relh:	sub	ebx,eax
 		sub	ebx,4
 		test	ebx,11b			;make sure alignment is same
 		jnz	error_rainawi
@@ -5122,254 +5129,254 @@ compile_dat:	mov	eax,[obj_ptr]		;save obj_ptr
 		jg	error_raioor
 		cmp	ebx,0FFFFFF00h		;if less than -100h, out of range
 		jl	error_raioor
-@@trys_relx:	and	ebx,1FFh		;in range
+.trys_relx:	and	ebx,1FFh		;in range
 		or	ecx,ebx			;install relative address into s field
 		ret
 
-@@trys_rel32:	or	ecx,1 shl 18		;@@ 32-bit, set immediate bit
-		call	@@tryvalueint		;get relative address
-		cmp	[@@pass],0		;if pass 0, don't qualify address
-		je	@@trys_relx32
-		call	@@checkcross		;check that address doesn't cross between cog/lut and hub
+.trys_rel32:	or	ecx,1 shl 18		;@@ 32-bit, set immediate bit
+		call	.tryvalueint	;get relative address
+		cmp	[.@pass],0		;if pass 0, don't qualify address
+		je		.trys_relx32
+		call	.checkcross	;check that address doesn't cross between cog/lut and hub
 		mov	eax,[hub_org]		;hub or cog mode?
 		cmp	[orgh],1
-		je	@@trys_relh32
+		je		.trys_relh32
 		mov	eax,[cog_org]
 		shl	ebx,2
-@@trys_relh32:	sub	ebx,eax
+.trys_relh32:	sub	ebx,eax
 		sub	ebx,8
 		test	ebx,11b			;make sure alignment is same
 		jnz	error_rainawi
 		sar	ebx,2			;get 18 significant offset bits into s
 		and	ebx,0FFFFFh shr 2
-@@trys_relx32:	clc				;enter augs instruction
-		call	@@augds
+.trys_relx32:	clc				;enter augs instruction
+		call		.augds
 		or	ecx,ebx
 		ret
 
 
-@@trys_imm_pab:	call	check_pound		;try s operand, check for #/## (disallow >0FFh for #)
-		jne	@@trys			;if no #, try s
+.trys_imm_pab:	call	check_pound		;try s operand, check for #/## (disallow >0FFh for #)
+		jne	.trys		;if no #, try s
 		or	ecx,1 shl 18		;set immediate bit
 		call	check_pound		;check for ##
-		je	@@trys_imm32
-		call	@@tryvalueint		;#, get 8-bit constant
+		je		.trys_imm32
+		call	.tryvalueint	;#, get 8-bit constant
 		cmp	ebx,0FFh		;make sure within 0FFh
 		ja	error_cmbf0t255
-		jmp	@@trys_immi		;install constant into s field
+		jmp	.trys_immi	;install constant into s field
 
 
-@@trys_imm:	call	check_pound		;try s operand, check for #/##
-		jne	@@trys			;if no #, try s
+.trys_imm:	call	check_pound		;try s operand, check for #/##
+		jne	.trys		;if no #, try s
 		or	ecx,1 shl 18		;set immediate bit
 		call	check_pound		;check for ##
-		jne	@@trys_imm9
-@@trys_imm32:	call	@@tryvalueint		;##, get 32-bit constant
+		jne		.trys_imm9
+.trys_imm32:	call	.tryvalueint	;##, get 32-bit constant
 		clc				;install augs
-		call	@@augds
-		jmp	@@trys_immi
-@@trys_imm9:	call	@@tryvaluecon		;#, get 9-bit constant
-@@trys_immi:	or	ecx,ebx			;install constant into s field
+		call		.augds
+		jmp		.trys_immi
+.trys_imm9:	call	.tryvaluecon	;#, get 9-bit constant
+.trys_immi:	or	ecx,ebx			;install constant into s field
 		ret
 
 
-@@trys:		call	@@tryvaluereg		;try s operand
+.trys:		call	.tryvaluereg	;try s operand
 		or	ecx,ebx			;install into s field
 		ret
 
 
-@@tryvaluereg:	call	@@tryvalueint		;get register address
+.tryvaluereg:	call	.tryvalueint	;get register address
 		cmp	ebx,1FFh		;make sure within 1FFh
 		ja	error_rcex
 		ret
 
 
-@@tryvaluecon:	call	@@tryvalueint		;get register value
+.tryvaluecon:	call	.tryvalueint	;get register value
 		cmp	ebx,1FFh		;make sure within 1FFh
 		ja	error_cmbf0t511
 		ret
 
 
-@@augds:	push	ebx			;enter augs/augd instruction
+.augds:	push	ebx			;enter augs/augd instruction
 		push	ecx
 		mov	eax,0Fh			;make augs/augd
 		rcl	eax,1
 		shl	eax,23
-		call	@@augret		;handle conditional field
+		call	.augret	;handle conditional field
 		or	ecx,eax			;install augs/augd
-		call	@@augcon
-		call	@@enterlong
+		call		.augcon
+		call		.enterlong
 		pop	ecx
 		pop	ebx
 		and	ebx,1FFh
 		ret
 
-@@augcon:	mov	eax,ebx			;insert augs/augd constant
+.augcon:	mov	eax,ebx			;insert augs/augd constant
 		shr	eax,9
 		or	ecx,eax
 		ret
 
-@@augret:	and	ecx,0F0000000h		;if 0000b (ret) then %1111b (always)
-		jnz	@@augret2
+.augret:	and	ecx,0F0000000h		;if 0000b (ret) then %1111b (always)
+		jnz		.augret2
 		or	ecx,0F0000000h
-@@augret2:	ret
+.augret2:	ret
 
 
-@@chkpab:	call	get_element		;check for ptra/ptrb expression, get into edx
+.chkpab:	call	get_element		;check for ptra/ptrb expression, get into edx
 
 		cmp	al,type_inc		;++(ptra/ptrb)?
-		jne	@@chkpab_noti
+		jne		.chkpab_noti
 		call	get_element
-		call	@@chkpab_reg
-		jne	@@chkpab_quit2
+		call		.chkpab_reg
+		jne		.chkpab_quit2
 		or	bl,40h+01h		;++ptra/ptrb, set update bit, set index to +1
-		jmp	@@chkpab_upd
-@@chkpab_noti:
+		jmp		.chkpab_upd
+.chkpab_noti:
 		cmp	al,type_dec		;--(ptra/ptrb)?
-		jne	@@chkpab_notd
+		jne		.chkpab_notd
 		call	get_element
-		call	@@chkpab_reg
-		jne	@@chkpab_quit2
+		call		.chkpab_reg
+		jne		.chkpab_quit2
 		or	bl,40h+1Fh		;--ptra/ptrb, set update bit, set index to -1
-		jmp	@@chkpab_upd
-@@chkpab_notd:
-		call	@@chkpab_reg		;ptra/ptrb(++/--)?
-		jne	@@chkpab_quit
+		jmp		.chkpab_upd
+.chkpab_notd:
+		call	.chkpab_reg	;ptra/ptrb(++/--)?
+		jne		.chkpab_quit
 
 		call	check_inc		;ptra/ptrb++?
-		jne	@@chkpab_notpi
+		jne		.chkpab_notpi
 		or	bl,40h+20h+01h		;ptra/ptrb++, set update and post bits, set index to +1
-		jmp	@@chkpab_upd
-@@chkpab_notpi:
+		jmp		.chkpab_upd
+.chkpab_notpi:
 		call	check_dec		;ptra/ptrb--?
-		jne	@@chkpab_upd
+		jne		.chkpab_upd
 		or	bl,40h+20h+1Fh		;ptra/ptrb--, set update and post bits, set index to -1
-		jmp	@@chkpab_upd
+		jmp		.chkpab_upd
 
-@@chkpab_quit2:	call	back_element		;not (++/--)ptra/ptrb(++/--), back up
-@@chkpab_quit:	call	back_element		;back up
+.chkpab_quit2:	call	back_element		;not (++/--)ptra/ptrb(++/--), back up
+.chkpab_quit:	call	back_element		;back up
 		clc				;not a ptra/ptrb expression, c=0
 		ret
 
-@@chkpab_upd:	mov	edx,ebx			;(++/--)ptra/ptrb(++/--), install bits
+.chkpab_upd:	mov	edx,ebx			;(++/--)ptra/ptrb(++/--), install bits
 		or	edx,(1 shl 18) + 100h	;set immediate bit and ptra/ptrb bit
 		call	check_leftb		;check for '[' to signify index
-		jne	@@chkpab_done		;if no index, done
+		jne	.chkpab_done	;if no index, done
 		call	check_pound		;check for ##
-		jne	@@chkpab_npp
+		jne		.chkpab_npp
 		call	get_pound
-		call	@@tryvalueint		;##, get 20-bit index value
+		call	.tryvalueint	;##, get 20-bit index value
 		test	dl,40h			;if update bit set and negative number, negate index
-		jz	@@chkpab_ppnu
+		jz		.chkpab_ppnu
 		test	dl,10h
-		jz	@@chkpab_ppnu
+		jz		.chkpab_ppnu
 		neg	ebx
-@@chkpab_ppnu:	and	ebx,0FFFFFh
+.chkpab_ppnu:	and	ebx,0FFFFFh
 		and	edx,1E0h
 		shl	edx,20-5
 		or	ebx,edx
 		clc				;install augs
-		call	@@augds
+		call		.augds
 		or	ecx,1 shl 18		;set immediate bit
 		or	ecx,ebx			;install lower 9 bits of constant
 		xor	edx,edx
-		jmp	@@chkpab_rb
-@@chkpab_npp:	call	@@tryvalueint		;no ##, get index value
+		jmp		.chkpab_rb
+.chkpab_npp:	call	.tryvalueint	;no ##, get index value
 		test	dl,40h			;if update bit set, check positive number
-		jz	@@chkpab_nup
+		jz		.chkpab_nup
 		test	dl,10h
-		jz	@@chkpab_pos
+		jz		.chkpab_pos
 		cmp	ebx,1			;'--' update, index must be 1..16
-		jb	@@chkpab_err4b
+		jb		.chkpab_err4b
 		cmp	ebx,16
-		ja	@@chkpab_err4b
+		ja		.chkpab_err4b
 		neg	bl
-		jmp	@@chkpab_ok
-@@chkpab_pos:	cmp	ebx,1			;'++' update, index must be 1..16
-		jb	@@chkpab_err4b
+		jmp		.chkpab_ok
+.chkpab_pos:	cmp	ebx,1			;'++' update, index must be 1..16
+		jb		.chkpab_err4b
 		cmp	ebx,16
-		ja	@@chkpab_err4b
+		ja		.chkpab_err4b
 		and	bl,0Fh
-		jmp	@@chkpab_ok
-@@chkpab_nup:	cmp	ebx,-32			;no update, index must be from -32 to +31
-		jae	@@chkpab_nupn
+		jmp		.chkpab_ok
+.chkpab_nup:	cmp	ebx,-32			;no update, index must be from -32 to +31
+		jae		.chkpab_nupn
 		cmp	ebx,31
-		ja	@@chkpab_err6b
-@@chkpab_nupn:	and	dl,0C0h
+		ja		.chkpab_err6b
+.chkpab_nupn:	and	dl,0C0h
 		and	bl,3Fh
-		jmp	@@chkpab_or	
-@@chkpab_ok:	and	dl,0E0h			;install ptr index
+		jmp	.chkpab_or
+.chkpab_ok:	and	dl,0E0h			;install ptr index
 		and	bl,1Fh
-@@chkpab_or:	or	dl,bl
-@@chkpab_rb:	call	get_rightb		;get ']'
-@@chkpab_done:	stc				;done, c=1
+.chkpab_or:	or	dl,bl
+.chkpab_rb:	call	get_rightb		;get ']'
+.chkpab_done:	stc				;done, c=1
 		ret
 
-@@chkpab_err6b:	call	restore_value_ptrs	;ptr index range errors
+.chkpab_err6b:	call	restore_value_ptrs	;ptr index range errors
 		jmp	error_picmr6b
-@@chkpab_err4b:	call	restore_value_ptrs
+.chkpab_err4b:	call	restore_value_ptrs
 		jmp	error_picmr116
 
-@@chkpab_reg:	cmp	al,type_register	;check ptra/ptrb
-		jne	@@chkpab_regn
+.chkpab_reg:	cmp	al,type_register	;check ptra/ptrb
+		jne		.chkpab_regn
 		cmp	ebx,1F8h		;ptra address
-		je	@@chkpab_regy
+		je		.chkpab_regy
 		cmp	ebx,1F9h		;ptrb address
-		jne	@@chkpab_regn
-@@chkpab_regy:	and	ebx,1
+		jne		.chkpab_regn
+.chkpab_regy:	and	ebx,1
 		shl	ebx,7
 		xor	al,al			;got ptra/ptrb, z=1
-@@chkpab_regn:	ret
+.chkpab_regn:	ret
 
 
-@@tryir:	call	check_back		;check for '\' absolute override
+.tryir:	call	check_back		;check for '\' absolute override
 		pushf				;try immediate or relative address
-		call	@@tryvalueint
+		call		.tryvalueint
 		cmp	ebx,0FFFFFh
 		ja	error_amnex
 		popf
-		je	@@tryir_abs		;if '\' absolute override, done
+		je	.tryir_abs	;if '\' absolute override, done
 
 		cmp	[orgh],1		;cog or hub mode?
-		je	@@tryir_hub
+		je		.tryir_hub
 
 		cmp	ebx,400h		;cog mode, absolute if >= $400
-		jb	@@tryir_rel
-		jmp	@@tryir_abs
+		jb		.tryir_rel
+		jmp		.tryir_abs
 
-@@tryir_hub:	cmp	ebx,400h		;hub mode, absolute if < $400
-		jb	@@tryir_abs
+.tryir_hub:	cmp	ebx,400h		;hub mode, absolute if < $400
+		jb		.tryir_abs
 
-@@tryir_rel:	stc				;relative address, c=1
+.tryir_rel:	stc				;relative address, c=1
 		ret
 
-@@tryir_abs:	clc				;absolute address, c=0
+.tryir_abs:	clc				;absolute address, c=0
 		ret
 
 
-@@checkcross:	cmp	[@@pass],0		;make sure relative branches do not cross cog/lut <--> hub
-		je	@@checkcrossx
+.checkcross:	cmp	[.@pass],0		;make sure relative branches do not cross cog/lut <--> hub
+		je		.checkcrossx
 		cmp	[orgh],1
-		je	@@checkcrossh
+		je		.checkcrossh
 
 		cmp	ebx,400h
 		jae	error_racc
 		ret
 
-@@checkcrossh:	cmp	ebx,400h
+.checkcrossh:	cmp	ebx,400h
 		jb	error_racc
-@@checkcrossx:	ret
+.checkcrossx:	ret
 
 
-@@enterinfo:	cmp	[@@infoflag],0		;enter any info
-		je	@@ret
-		cmp	[@@pass],0		;enter dat block info on first pass
-		jne	@@ret
-		push	[@@srcstart]
+.enterinfo:	cmp	[.@infoflag],0		;enter any info
+		je		.ret
+		cmp	[.@pass],0		;enter dat block info on first pass
+		jne		.ret
+		push	[.@srcstart]
 		pop	[inf_start]
 		push	[source_ptr]
 		pop	[inf_finish]
-		push	[@@objstart]
+		push	[.@objstart]
 		pop	[inf_data0]
 		push	[obj_ptr]
 		pop	[inf_data1]
@@ -5377,18 +5384,19 @@ compile_dat:	mov	eax,[obj_ptr]		;save obj_ptr
 		jmp	enter_info
 
 
-dbx		@@infoflag
-ddx		@@srcstart
-ddx		@@objstart
+		udataseg
+dbx		.@infoflag
+ddx		.@srcstart
+ddx		.@objstart
 
-ddx		@@sourceptr
-ddx		@@objptr
-ddx		@@local
-dbx		@@size
-dbx		@@sizefit
-dbx		@@pass
+ddx		.@sourceptr
+ddx		.@objptr
+ddx		.@local
+dbx		.@size
+dbx		.@sizefit
+dbx		.@pass
 
-dbx		@@effectbits
+dbx		.@effectbits
 
 dbx		orgh
 ddx		orgh_offset
@@ -5398,6 +5406,7 @@ ddx		cog_org
 ddx		cog_org_limit
 ddx		hub_org
 ddx		hub_org_limit
+		codeseg
 ;
 ;
 ; Compile sub blocks
@@ -5405,23 +5414,23 @@ ddx		hub_org_limit
 compile_sub_blocks:
 
 		cmp	[pasm_mode],1		;if pasm mode, done
-		je	@@done
+		je		.done
 
-		mov	[@@block],block_pub	;compile pub's
-		call	@@compile
+		mov	[.@block],block_pub	;compile pub's
+		call		.compile
 
-		mov	[@@block],block_pri	;compile pri's
-		call	@@compile
+		mov	[.@block],block_pri	;compile pri's
+		call		.compile
 
-		inc	[@@sub]			;enter end offset after sub index, done
-		jmp	@@enteroffset
+		inc	[.@sub]			;enter end offset after sub index, done
+		jmp		.enteroffset
 
 
-@@compile:	call	reset_element		;reset element
+.compile:	call	reset_element		;reset element
 
-@@nextblock:	mov	dl,[@@block]		;scan for pub/pri block
+.nextblock:	mov	dl,[.@block]		;scan for pub/pri block
 		call	next_block
-		jc	@@done
+		jc		.done
 
 		call	write_symbols_local	;start local symbols
 
@@ -5431,110 +5440,110 @@ compile_sub_blocks:
 		pop	[inf_data0]
 
 		call	get_element		;get sub symbol and save value
-		mov	[@@sub],ebx
+		mov	[.@sub],ebx
 
 		push	[source_start]		;set info sub name
 		pop	[inf_data2]
 		push	[source_finish]
 		pop	[inf_data3]
 
-		mov	[@@local],0		;reset local variable counter
+		mov	[.@local],0		;reset local variable counter
 
 
 		call	get_left		;get '('
 		call	check_right		;if ')', no parameters
-		je	@@noparams
+		je		.noparams
 
-@@parameter:	call	get_element		;get parameter name
+.parameter:	call	get_element		;get parameter name
 		cmp	al,type_undefined	;make sure unique
 		jne	error_eaupn
 		call	backup_symbol		;enter local symbol, update pointer
 		mov	al,type_loc_long
-		mov	ebx,[@@local]
+		mov	ebx,[.@local]
 		call	enter_symbol2_print
-		add	[@@local],4
+		add	[.@local],4
 		call	get_comma_or_right	;get comma or ')'
-		je	@@parameter
-@@noparams:
+		je		.parameter
+.noparams:
 
 		call	check_colon		;check for ':' to signify result(s)
-		jne	@@noresult
+		jne		.noresult
 
-@@result:	call	get_element		;get result name
+.result:	call	get_element		;get result name
 		cmp	al,type_undefined	;make sure unique
 		jne	error_eaurn
 		call	backup_symbol		;enter local symbol, update pointer
 		mov	al,type_loc_long
-		mov	ebx,[@@local]
+		mov	ebx,[.@local]
 		call	enter_symbol2_print
-		add	[@@local],4
+		add	[.@local],4
 		call	check_comma		;check for comma
-		je	@@result
-@@noresult:
+		je		.result
+.noresult:
 
-		push	[@@local]		;set local variable base
-		pop	[@@localvar]
+		push	[.@local]		;set local variable base
+		pop	[.@localvar]
 
 		call	get_pipe_or_end		;get pipe or end
-		jne	@@novariables
+		jne		.novariables
 
 
-@@variable:	call	get_element		;get alignw/alignl, byte/word/long, or unique variable
+.variable:	call	get_element		;get alignw/alignl, byte/word/long, or unique variable
 
 		call	check_align		;alignw/alignl?
-		jne	@@noalign
-		test	[@@local],ecx
-		jz	@@aligned
-		or	[@@local],ecx
-		inc	[@@local]
-@@aligned:	call	get_element
-@@noalign:
+		jne		.noalign
+		test	[.@local],ecx
+		jz		.aligned
+		or	[.@local],ecx
+		inc	[.@local]
+.aligned:	call	get_element
+.noalign:
 		cmp	al,type_size		;byte/word/long?
 		mov	cl,type_loc_long	;default variable size is long
-		jne	@@nosize
+		jne		.nosize
 		mov	cl,bl
 		add	cl,type_loc_byte
 		call	get_element		;get variable
-@@nosize:
+.nosize:
 		cmp	al,type_undefined	;check variable name
 		jne	error_eauvnsa
 		call	backup_symbol		;backup variable name
 		mov	al,cl			;enter variable symbol
-		mov	ebx,[@@local]
+		mov	ebx,[.@local]
 		call	enter_symbol2_print
 
 		mov	edx,1			;ready default count
 		call	check_leftb		;check for '[' to signify array
-		jne	@@notarray
+		jne		.notarray
 		call	get_value_int		;get array count, check limit
 		mov	edx,ebx
 		cmp	edx,locals_limit
 		ja	error_loxlve
 		call	get_element		;skip ']' (vetted by compile_sub_blocks_id)
-@@notarray:
+.notarray:
 		sub	cl,type_loc_byte	;scale count by size
 		shl	edx,cl
 		add	cl,type_loc_byte
 
-		add	[@@local],edx		;add to local pointer
-		cmp	[@@local],locals_limit	;check limit
+		add	[.@local],edx		;add to local pointer
+		cmp	[.@local],locals_limit	;check limit
 		ja	error_loxlve
 
 		call	get_comma_or_end	;get comma or end
-		je	@@variable		;if comma, get next variable
-@@novariables:
+		je	.variable	;if comma, get next variable
+.novariables:
 
-		call	@@enteroffset		;enter sub offset into index
+		call	.enteroffset	;enter sub offset into index
 
-		mov	eax,[@@local]		;compile rfvar for local variables
-		sub	eax,[@@localvar]
+		mov	eax,[.@local]		;compile rfvar for local variables
+		sub	eax,[.@localvar]
 		test	eax,11b			;round up to long
-		jz	@@rounded
+		jz		.rounded
 		add	eax,4
-@@rounded:	shr	eax,2
+.rounded:	shr	eax,2
 		call	compile_rfvar
 
-		mov	eax,[@@sub]		;set number of results for method
+		mov	eax,[.@sub]		;set number of results for method
 		shr	eax,20
 		and	eax,0Fh
 		mov	[sub_results],eax
@@ -5545,32 +5554,33 @@ compile_sub_blocks:
 		pop	[inf_finish]
 		push	[obj_ptr]		;set info obj finish
 		pop	[inf_data1]
-		cmp	[@@block],block_pub	;set info type
+		cmp	[.@block],block_pub	;set info type
 		mov	eax,info_pub
-		je	@@pubtype
+		je		.pubtype
 		mov	eax,info_pri
-@@pubtype:	mov	[inf_type],eax
+.pubtype:	mov	[inf_type],eax
 		call	enter_info		;enter info
 
 		call	reset_symbols_local	;cancel local symbols
 		call	write_symbols_main
 
-		jmp	@@nextblock		;get next block
+		jmp	.nextblock	;get next block
 
-@@done:		ret
+.done:		ret
 
 
-@@enteroffset:	mov	ebx,[@@sub]		;enter offset into index
+.enteroffset:	mov	ebx,[.@sub]		;enter offset into index
 		and	ebx,0FFFFFh
 		mov	eax,[obj_ptr]
-		or	[dword obj+ebx*4],eax
+		or	dword [obj+ebx*4],eax
 		ret
 
-
-dbx		@@block
-ddx		@@sub
-ddx		@@local
-ddx		@@localvar
+		udataseg
+dbx		.@block
+ddx		.@sub
+ddx		.@local
+ddx		.@localvar
+		codeseg
 ;
 ;
 ; Compile obj data
@@ -5578,59 +5588,60 @@ ddx		@@localvar
 compile_obj_blocks:
 
 		cmp	[pasm_mode],1		;if pasm mode, done
-		je	@@done
+		je		.done
 
 		call	pad_obj_long		;pad obj to next long alignment
 
 		xor	ebx,ebx			;reset file counter
 
-@@file:		cmp	ebx,[obj_files]		;if no more files, modify index
-		je	@@filesdone
+.file:		cmp	ebx,[obj_files]		;if no more files, modify index
+		je		.filesdone
 
 		mov	esi,[obj_offsets+ebx*4]	;get obj data address
-		add	esi,offset obj_data
+		add	esi,obj_data
 
 		mov	eax,[obj_ptr]		;set objptr to current
-		mov	[@@objptr+ebx*4],eax
+		mov	[.@objptr+ebx*4],eax
 
 		lodsd				;get vsize and set objvar
-		mov	[@@objvar+ebx*4],eax
+		mov	[.@objvar+ebx*4],eax
 
 		lodsd				;get psize and append obj bytes
 		mov	ecx,eax
-@@insert:	lodsb
+.insert:	lodsb
 		call	enter_obj
-		loop	@@insert
+		loop	 .insert
 
 		inc	ebx			;inc file counter
-		jmp	@@file			;get next obj
-@@filesdone:
+		jmp	.file		;get next obj
+.filesdone:
 
 		mov	ecx,[obj_count]		;get number of objects in index
-		jecxz	@@done
+		jecxz		.done
 
 		lea	edi,[obj]		;get start of object index
 
-@@index:	mov	ebx,[edi]		;get file number from index
+.index:	mov	ebx,[edi]		;get file number from index
 
-		mov	eax,[@@objptr+ebx*4]	;write obj offset to index
+		mov	eax,[.@objptr+ebx*4]	;write obj offset to index
 		stosd
 
 		mov	eax,[var_ptr]		;write var offset to index
 		stosd
 
-		mov	eax,[@@objvar+ebx*4]	;update var pointer, check limit
+		mov	eax,[.@objvar+ebx*4]	;update var pointer, check limit
 		add	[var_ptr],eax
 		cmp	[var_ptr],obj_limit
 		ja	error_tmvsid
 
-		loop	@@index			;handle next object
+		loop	.index		;handle next object
 
-@@done:		ret
+.done:		ret
 
-
-ddx		@@objptr,file_limit
-ddx		@@objvar,file_limit
+		udataseg
+ddx		.@objptr,file_limit
+ddx		.@objvar,file_limit
+		codeseg
 ;
 ;
 ; Distill obj blocks
@@ -5638,11 +5649,11 @@ ddx		@@objvar,file_limit
 distill_obj_blocks:
 
 		cmp	[pasm_mode],1		;if pasm mode, exit
-		je	@@done
+		je		.done
 
 		jmp	distill_objects
 
-@@done:		ret
+.done:		ret
 ;
 ;
 ; Collapse DEBUG data
@@ -5650,35 +5661,35 @@ distill_obj_blocks:
 collapse_debug_data:
 
 		cmp	[debug_mode],0		;if not debug mode, exit
-		je	@@done
+		je		.done
 
 		cmp	[obj_stack_ptr],1	;if not bottom recursion level, exit
-		jne	@@done
+		jne		.done
 
 		xor	edx,edx			;find first empty debug table entry
 
-@@scan:		cmp	[word debug_data+edx],0
-		jne	@@next
+.scan:		cmp	word [debug_data+edx],0
+		jne		.next
 
-		movzx	ecx,[word debug_data]	;collapse space between debug table and debug data
+		movzx	ecx,word [debug_data]	;collapse space between debug table and debug data
 		sub	ecx,200h
-		jecxz	@@empty
+		jecxz		.empty
 		lea	esi,[debug_data+200h]
 		lea	edi,[debug_data+edx]
 	rep	movsb
-@@empty:
+.empty:
 		mov	eax,200h		;adjust pointers downward
 		sub	eax,edx
-@@adjust:	sub	edx,2
-		js	@@done
-		sub	[word debug_data+edx],ax
-		jmp	@@adjust
+.adjust:	sub	edx,2
+		js		.done
+		sub	word [debug_data+edx],ax
+		jmp		.adjust
 
-@@next:		add	edx,2
+.next:		add	edx,2
 		cmp	edx,200h
-		jne	@@scan
-@@done:
-		cmp	[word debug_data],debug_size_limit	;make sure data fits
+		jne		.scan
+.done:
+		cmp	word [debug_data],debug_size_limit	;make sure data fits
 		ja	error_dditl
 
 		ret
@@ -5696,7 +5707,7 @@ compile_final:	mov	[size_flash_loader],flash_loader_end-flash_loader	;set size_f
 		mov	[size_var],0		;size_var = 0
 
 		cmp	[pasm_mode],1		;if pasm mode, exit
-		je	@@done
+		je		.done
 
 
 		mov	[size_interpreter],interpreter_end-interpreter		;set size_interpreter
@@ -5708,122 +5719,122 @@ compile_final:	mov	[size_flash_loader],flash_loader_end-flash_loader	;set size_f
 
 		lea	esi,[pubcon_list]	;append pub/con list
 		mov	ecx,[pubcon_list_size]
-@@list:		lodsb
+.list:		lodsb
 		call	enter_obj
-		loop	@@list
+		loop	 .list
 
 		mov	eax,8			;move object upwards to accommodate vsize and psize longs
 		call	move_obj_up
 
 		mov	eax,[var_ptr]		;insert vsize
-		mov	[dword obj+0],eax
+		mov	dword [obj+0],eax
 		mov	[size_var],eax		;set size_var
 
-		mov	[dword obj+4],edx	;insert psize
+		mov	dword [obj+4],edx	;insert psize
 		mov	[size_obj],edx		;set size_obj
 
 		lea	esi,[obj]		;compute checksum
 		mov	ecx,[obj_ptr]
 		mov	ah,0
-@@crc:		lodsb
+.crc:		lodsb
 		sub	ah,al
-		loop	@@crc
+		loop	 .crc
 
 		mov	[obj+8+edx],ah		;insert checksum (+8 accommodates vsize and psize longs)
 
-@@done:		ret
+.done:		ret
 ;
 ;
 ; Determine download baud and debug pins and baud
 ;
 determine_bauds_pins:
 
-		lea	esi,[@@symlbaud]	;check for 'download_baud' symbol
+		lea	esi,[.@symlbaud]	;check for 'download_baud' symbol
 		call	check_debug_symbol
 		ja	error_downbaud		;if defined (c=0) and not integer (z=0), then error
-		jc	@@nosymlbaud
+		jc		.nosymlbaud
 		mov	[download_baud],ebx
-@@nosymlbaud:
-		lea	esi,[@@sympin]		;check for 'debug_pin' symbol
+.nosymlbaud:
+		lea	esi,[.@sympin]		;check for 'debug_pin' symbol
 		call	check_debug_symbol
 		ja	error_debugpin		;if defined (c=0) and not integer (z=0), then error
-		jnc	@@gotsympintx
-		lea	esi,[@@sympintx]	;check for 'debug_pin_tx' symbol
+		jnc		.gotsympintx
+		lea	esi,[.@sympintx]	;check for 'debug_pin_tx' symbol
 		call	check_debug_symbol
 		ja	error_debugptx		;if defined (c=0) and not integer (z=0), then error
-		jnc	@@gotsympintx
+		jnc		.gotsympintx
 		mov	bl,62			;not defined, use 62
-@@gotsympintx:	and	bl,3Fh
+.gotsympintx:	and	bl,3Fh
 		mov	[debug_pin_tx],bl
 
-		lea	esi,[@@sympinrx]	;check for 'debug_pin_rx' symbol
+		lea	esi,[.@sympinrx]	;check for 'debug_pin_rx' symbol
 		call	check_debug_symbol
 		ja	error_debugprx		;if defined (c=0) and not integer (z=0), then error
-		jnc	@@gotsympinrx
+		jnc		.gotsympinrx
 		mov	bl,63			;not defined, use 63
-@@gotsympinrx:	and	bl,3Fh
+.gotsympinrx:	and	bl,3Fh
 		mov	[debug_pin_rx],bl
 
-		lea	esi,[@@symdbaud]	;check for 'debug_baud' symbol
+		lea	esi,[.@symdbaud]	;check for 'debug_baud' symbol
 		call	check_debug_symbol
 		ja	error_debugbaud		;if defined (c=0) and not integer (z=0), then error
-		jnc	@@gotsymdbaud
+		jnc		.gotsymdbaud
 		mov	ebx,[download_baud]	;not defined, use download_baud
-@@gotsymdbaud:	mov	[debug_baud],ebx
+.gotsymdbaud:	mov	[debug_baud],ebx
 
 		mov	ecx,-1			;check for host-side symbols
-		lea	esi,[@@symleft]
+		lea	esi,[.@symleft]
 		lea	edi,[debug_left]
-		call	@@hostsymbol
-		lea	esi,[@@symtop]
+		call		.hostsymbol
+		lea	esi,[.@symtop]
 		lea	edi,[debug_top]
-		call	@@hostsymbol
-		lea	esi,[@@symwidth]
+		call		.hostsymbol
+		lea	esi,[.@symwidth]
 		lea	edi,[debug_width]
-		call	@@hostsymbol
-		lea	esi,[@@symheight]
+		call		.hostsymbol
+		lea	esi,[.@symheight]
 		lea	edi,[debug_height]
-		call	@@hostsymbol
+		call		.hostsymbol
 
 		xor	ecx,ecx
-		lea	esi,[@@symdisleft]
+		lea	esi,[.@symdisleft]
 		lea	edi,[debug_display_left]
-		call	@@hostsymbol
-		lea	esi,[@@symdistop]
+		call		.hostsymbol
+		lea	esi,[.@symdistop]
 		lea	edi,[debug_display_top]
-		call	@@hostsymbol
-		lea	esi,[@@symlog]
+		call		.hostsymbol
+		lea	esi,[.@symlog]
 		lea	edi,[debug_log_size]
-		call	@@hostsymbol
-		lea	esi,[@@symoff]
+		call		.hostsymbol
+		lea	esi,[.@symoff]
 		lea	edi,[debug_windows_off]
-		call	@@hostsymbol
+		call		.hostsymbol
 
 		ret
 
 
-@@hostsymbol:	call	check_debug_symbol		;check for host-side symbol
-		jnc	@@hostsymbolok
+.hostsymbol:	call	check_debug_symbol		;check for host-side symbol
+		jnc		.hostsymbolok
 		mov	ebx,ecx
-@@hostsymbolok:	mov	[edi],ebx
+.hostsymbolok:	mov	[edi],ebx
 		ret
 
 
-@@symlbaud:	db	'DOWNLOAD_BAUD',0
+.@symlbaud	db	'DOWNLOAD_BAUD',0
 
-@@sympin:	db	'DEBUG_PIN',0		;same purpose as debug_pin_tx
-@@sympintx:	db	'DEBUG_PIN_TX',0
-@@sympinrx:	db	'DEBUG_PIN_RX',0
-@@symdbaud:	db	'DEBUG_BAUD',0
+.@sympin	db	'DEBUG_PIN',0		;same purpose as debug_pin_tx
+.@sympintx	db	'DEBUG_PIN_TX',0
+.@sympinrx	db	'DEBUG_PIN_RX',0
+.@symdbaud	db	'DEBUG_BAUD',0
 
-@@symleft:	db	'DEBUG_LEFT',0
-@@symtop:	db	'DEBUG_TOP',0
-@@symwidth:	db	'DEBUG_WIDTH',0
-@@symheight:	db	'DEBUG_HEIGHT',0
-@@symdisleft:	db	'DEBUG_DISPLAY_LEFT',0
-@@symdistop:	db	'DEBUG_DISPLAY_TOP',0
-@@symlog:	db	'DEBUG_LOG_SIZE',0
-@@symoff:	db	'DEBUG_WINDOWS_OFF',0
+.@symleft	db	'DEBUG_LEFT',0
+.@symtop	db	'DEBUG_TOP',0
+.@symwidth	db	'DEBUG_WIDTH',0
+.@symheight	db	'DEBUG_HEIGHT',0
+.@symdisleft	db	'DEBUG_DISPLAY_LEFT',0
+.@symdistop	db	'DEBUG_DISPLAY_TOP',0
+.@symlog	db	'DEBUG_LOG_SIZE',0
+.@symoff	db	'DEBUG_WINDOWS_OFF',0
 ;
 ;
 ; Check for DEBUG-related symbol
@@ -5840,10 +5851,10 @@ check_debug_symbol:
 		call	find_symbol
 		cmp	al,type_undefined
 		stc				;c=1 if undefined
-		je	@@nosymbol
+		je		.nosymbol
 		cmp	al,type_con
 		clc				;c=0 if defined, z=0 if not integer constant
-@@nosymbol:	pop	edi
+.nosymbol:	pop	edi
 		pop	ecx
 		ret
 ;
@@ -5857,12 +5868,12 @@ insert_interpreter:
 		mov	[obj_ptr],eax
 
 		mov	edx,0			;determine index of first pub
-@@findpub:	mov	eax,[dword obj+8+edx*8]
+.findpub:	mov	eax,dword [obj+8+edx*8]
 		or	eax,eax
-		js	@@gotpub
+		js		.gotpub
 		inc	edx
-		jmp	@@findpub
-@@gotpub:	shl	edx,1+20		;get index into edx[31:20]
+		jmp		.findpub
+.gotpub:	shl	edx,1+20		;get index into edx[31:20]
 
 		mov	eax,[size_interpreter]	;move object upwards to accommodate interpreter
 		sub	eax,8			;(-8 eliminates vsize and psize longs)
@@ -5874,21 +5885,21 @@ insert_interpreter:
 	rep	movsb
 
 		mov	eax,[size_interpreter]	;set pbase_init
-		mov	[dword obj+@@pbase_init],eax
+		mov	dword [obj+.@pbase_init],eax
 
 		add	eax,[size_obj]		;set vbase_init
 		or	edx,eax			;index of first pub in vbase_init[31:20]
-		mov	[dword obj+@@vbase_init],edx
+		mov	dword [obj+.@vbase_init],edx
 
 		add	eax,[size_var]		;set dbase_init
-		mov	[dword obj+@@dbase_init],eax
+		mov	dword [obj+.@dbase_init],eax
 
 		add	eax,400h		;ensure dbase has $100 longs of stack headroom
 
 		cmp	[debug_mode],0		;account for debugger
-		je	@@nodebug
+		je		.nodebug
 		add	eax,4000h
-@@nodebug:
+.nodebug:
 		cmp	eax,obj_limit		;verify that everything fits
 		jae	error_pex
 
@@ -5896,40 +5907,40 @@ insert_interpreter:
 		add	eax,400h		;include stack headroom so that first pub's params are cleared
 		shr	eax,2
 		dec	eax
-		mov	[dword obj+@@var_longs],eax
+		mov	dword [obj+.@var_longs],eax
 
 		mov	eax,[clkmode]		;set clkmode_hub
-		mov	[dword obj+@@clkmode_hub],eax
+		mov	dword [obj+.@clkmode_hub],eax
 
 		mov	eax,[clkfreq]		;set clkfreq_hub
-		mov	[dword obj+@@clkfreq_hub],eax
+		mov	dword [obj+.@clkfreq_hub],eax
 
 		cmp	[debug_mode],0		;if not debug mode, force NOP instructions
-		jne	@@debugmode
-		mov	[dword obj+@@_debugnop1_],0
-		mov	[dword obj+@@_debugnop2_],0
-		mov	[dword obj+@@_debugnop3_],0
-		jmp	@@notdebugmode
-@@debugmode:	movzx	eax,[debug_pin_rx]	;debug mode, install debug_pin_rx into instructions
-		or	[dword obj+@@_debugnop2_],eax
+		jne		.debugmode
+		mov	dword [obj+.@_debugnop1_],0
+		mov	dword [obj+.@_debugnop2_],0
+		mov	dword [obj+.@_debugnop3_],0
+		jmp		.notdebugmode
+.debugmode:	movzx	eax,[debug_pin_rx]	;debug mode, install debug_pin_rx into instructions
+		or	dword [obj+.@_debugnop2_],eax
 		shl	eax,9
-		or	[dword obj+@@_debugnop1_],eax
-		or	[dword obj+@@_debugnop3_],eax
-@@notdebugmode:
+		or	dword [obj+.@_debugnop1_],eax
+		or	dword [obj+.@_debugnop3_],eax
+.notdebugmode:
 		ret
 
 
-@@pbase_init	=	30h
-@@vbase_init	=	34h
-@@dbase_init	=	38h
-@@var_longs	=	3Ch
-@@clkmode_hub	=	40h
-@@clkfreq_hub	=	44h
-@@_debugnop1_	=	0E4Ch
-@@_debugnop2_	=	0E50h
-@@_debugnop3_	=	0E54h
+.@pbase_init	=	30h
+.@vbase_init	=	34h
+.@dbase_init	=	38h
+.@var_longs	=	3Ch
+.@clkmode_hub	=	40h
+.@clkfreq_hub	=	44h
+.@_debugnop1_	=	0E4Ch
+.@_debugnop2_	=	0E50h
+.@_debugnop3_	=	0E54h
 
-interpreter:	include	"Spin2_interpreter.inc"
+interpreter:	file	"Spin2_interpreter.obj"
 interpreter_end:
 ;
 ;
@@ -5938,15 +5949,15 @@ interpreter_end:
 insert_debugger:
 
 		test	[clkmode],10b			;make sure crystal/clock mode
-		jz	@@error
+		jz		.error
 		cmp	[clkfreq],10000000		;make sure >= 10 MHz
-		jae	@@ok
-@@error:	jmp	error_debugclk
-@@ok:
+		jae		.ok
+.error:	jmp	error_debugclk
+.ok:
 
 		mov	edx,[obj_ptr]			;get obj_ptr (application size)
 
-		movzx	eax,[word debug_data]		;move program upwards to accommodate debugger and debug data
+		movzx	eax,word [debug_data]		;move program upwards to accommodate debugger and debug data
 		add	eax,debugger_end-debugger
 		call	move_obj_up
 
@@ -5957,39 +5968,39 @@ insert_debugger:
 
 		lea	esi,[debug_data]		;install debugger data
 		lea	edi,[obj + (debugger_end-debugger)]
-		movzx	ecx,[word debug_data]
+		movzx	ecx,word [debug_data]
 	rep	movsb
 
-		mov	[dword obj+@@_appsize_],edx	;install _appsize_
+		mov	dword [obj+.@_appsize_],edx	;install _appsize_
 
 		mov	eax,[clkfreq]			;install _clkfreq_
-		mov	[dword obj+@@_clkfreq_],eax
+		mov	dword [obj+.@_clkfreq_],eax
 
 		mov	eax,[clkmode]			;install _clkmode2_
-		mov	[dword obj+@@_clkmode2_],eax
+		mov	dword [obj+.@_clkmode2_],eax
 
 		and	al,0FCh				;install _clkmode1_
-		mov	[dword obj+@@_clkmode1_],eax
+		mov	dword [obj+.@_clkmode1_],eax
 
-		lea	esi,[@@symcogs]			;check for 'debug_cogs' symbol
+		lea	esi,[.@symcogs]			;check for 'debug_cogs' symbol
 		call	check_debug_symbol
-		jc	@@nosymcogs
+		jc		.nosymcogs
 		jne	error_debugcog
-		mov	[obj+@@_hubset_],bl
-@@nosymcogs:
-		lea	esi,[@@symcoginit]		;check for 'debug_coginit' symbol
+		mov	[obj+.@_hubset_],bl
+.nosymcogs:
+		lea	esi,[.@symcoginit]		;check for 'debug_coginit' symbol
 		call	check_debug_symbol
-		jc	@@nosymcoginit
-		mov	[dword obj+@@_brkcond_],110h
-@@nosymcoginit:
-		lea	esi,[@@symmain]			;check for 'debug_main' symbol
+		jc		.nosymcoginit
+		mov	dword [obj+.@_brkcond_],110h
+.nosymcoginit:
+		lea	esi,[.@symmain]			;check for 'debug_main' symbol
 		call	check_debug_symbol
-		jc	@@nosymmain
-		mov	[dword obj+@@_brkcond_],001h
-@@nosymmain:
-		lea	esi,[@@symdelay]		;check for 'debug_delay' symbol
+		jc		.nosymmain
+		mov	dword [obj+.@_brkcond_],001h
+.nosymmain:
+		lea	esi,[.@symdelay]		;check for 'debug_delay' symbol
 		call	check_debug_symbol
-		jc	@@nosymdelay
+		jc		.nosymdelay
 		jne	error_debugdly
 		mov	eax,[clkfreq]
 		xor	edx,edx
@@ -5997,45 +6008,45 @@ insert_debugger:
 		div	ecx
 		mul	ebx
 		or	edx,edx				;limit to 0FFFFFFFFh
-		jz	@@symdelayok
+		jz		.symdelayok
 		mov	eax,0FFFFFFFFh
-@@symdelayok:	mov	[dword obj+@@_delay_],eax
-@@nosymdelay:
+.symdelayok:	mov	dword [obj+.@_delay_],eax
+.nosymdelay:
 		mov	al,[debug_pin_tx]		;set _txpin_
-		mov	[obj+@@_txpin_],al
+		mov	[obj+.@_txpin_],al
 
 		mov	al,[debug_pin_rx]		;set _rxpin_
-		mov	[obj+@@_rxpin_],al
+		mov	[obj+.@_rxpin_],al
 
 		mov	eax,[debug_baud]		;install _baud_
-		mov	[dword obj+@@_baud_],eax
+		mov	dword [obj+.@_baud_],eax
 
-		lea	esi,[@@symtimestamp]		;check for 'debug_timestamp' symbol
+		lea	esi,[.@symtimestamp]		;check for 'debug_timestamp' symbol
 		call	check_debug_symbol
-		jc	@@nosymstamp
-		or	[obj+@@_rxpin_+3],80h		;indicate timestamp in msb of _rxpin_
-@@nosymstamp:
+		jc		.nosymstamp
+		or	[obj+.@_rxpin_+3],80h		;indicate timestamp in msb of _rxpin_
+.nosymstamp:
 		ret
 
 
-@@symcogs:	db	'DEBUG_COGS',0
-@@symcoginit:	db	'DEBUG_COGINIT',0
-@@symmain:	db	'DEBUG_MAIN',0
-@@symdelay:	db	'DEBUG_DELAY',0
-@@symtimestamp:	db	'DEBUG_TIMESTAMP',0
+.@symcogs	db	'DEBUG_COGS',0
+.@symcoginit	db	'DEBUG_COGINIT',0
+.@symmain	db	'DEBUG_MAIN',0
+.@symdelay	db	'DEBUG_DELAY',0
+.@symtimestamp	db	'DEBUG_TIMESTAMP',0
 
-@@_clkfreq_	=	0D4h
-@@_clkmode1_	=	0D8h
-@@_clkmode2_	=	0DCh
-@@_delay_	=	0E0h
-@@_appsize_	=	0E4h
-@@_hubset_	=	0E8h
-@@_brkcond_	=	11Ch
-@@_txpin_	=	140h
-@@_rxpin_	=	144h
-@@_baud_	=	148h
+.@_clkfreq_	=	0D4h
+.@_clkmode1_	=	0D8h
+.@_clkmode2_	=	0DCh
+.@_delay_	=	0E0h
+.@_appsize_	=	0E4h
+.@_hubset_	=	0E8h
+.@_brkcond_	=	11Ch
+.@_txpin_	=	140h
+.@_rxpin_	=	144h
+.@_baud_	=	148h
 
-debugger:	include "Spin2_debugger.inc"
+debugger:	file "Spin2_debugger.obj"
 debugger_end:
 ;
 ;
@@ -6043,40 +6054,40 @@ debugger_end:
 ;
 insert_flash_loader:
 
-		call	pad_obj_long			;pad obj to next long alignment for checksum computation
+		call	pad_obj_long		;pad obj to next long alignment for checksum computation
 
-		mov	eax,[size_flash_loader]		;move program upwards to accommodate flash loader
+		mov	eax,[size_flash_loader]	;move program upwards to accommodate flash loader
 		call	move_obj_up
 
-		lea	esi,[flash_loader]		;install flash loader
+		lea	esi,[flash_loader]	;install flash loader
 		lea	edi,[obj]
 		mov	ecx,eax
 	rep	movsb
 
-		cmp	[debug_mode],0			;if not debug mode, force NOP instruction at WRPIN
-		jne	@@debugmode
-		mov	[dword obj+@@_debugnop_],0
-		jmp	@@notdebugmode
-@@debugmode:	mov	al,[debug_pin_tx]		;debug mode, install debug_pin_tx into WRPIN
-		or	[obj+@@_debugnop_],al
-@@notdebugmode:
-		mov	ecx,[obj_ptr]			;compute negative sum of all data
+		cmp	[debug_mode],0		;if not debug mode, force NOP instruction at WRPIN 
+		jne		.debugmode
+		mov	dword [obj+.@_debugnop_],0
+		jmp		.notdebugmode
+.debugmode:	mov	al,[debug_pin_tx]	;debug mode, install debug_pin_tx into WRPIN
+		or	[obj+.@_debugnop_],al
+.notdebugmode:
+		mov	ecx,[obj_ptr]		;compute negative sum of all data
 		shr	ecx,2
 		mov	ebx,0
 		lea	esi,[obj]
-@@sum:		lodsd
+.sum:		lodsd
 		sub	ebx,eax
-		loop	@@sum
+		loop	 .sum
 
-		mov	[dword obj+@@_checksum_],ebx	;insert checksum into loader
+		mov	dword [obj+.@_checksum_],ebx	;insert checksum into loader
 
 		ret
 
 
-@@_checksum_	=	04h
-@@_debugnop_	=	08h
+.@_checksum_	=	04h
+.@_debugnop_	=	08h
 
-flash_loader:	include	"flash_loader.inc"
+flash_loader:	file	"flash_loader.obj"
 flash_loader_end:
 ;
 ;
@@ -6084,48 +6095,48 @@ flash_loader_end:
 ;
 insert_clock_setter:
 
-		cmp	[clkmode],00b				;if RCFAST mode, nothing to do
-		je	@@done
+		cmp	[clkmode],00b			;if RCFAST mode, nothing to do
+		je		.done
 
 		mov	eax,clock_setter_end-clock_setter	;move program upwards to accommodate clock setter
 		call	move_obj_up
 
-		lea	esi,[clock_setter]			;install clock setter
+		lea	esi,[clock_setter]		;install clock setter
 		lea	edi,[obj]
 		mov	ecx,clock_setter_end-clock_setter
 	rep	movsb
 
-		cmp	[clkmode],01b				;NOP unneeded instructions
-		jne	@@notrcslow
-		mov	[dword obj+@@_ext1_],0			;RCSLOW
-		mov	[dword obj+@@_ext2_],0
-		mov	[dword obj+@@_ext3_],0
-		jmp	@@nopdone
-@@notrcslow:	mov	[dword obj+@@_rcslow_],0		;not RCSLOW
-@@nopdone:
-		mov	eax,[clkmode]				;install _clkmode2_
-		mov	[dword obj+@@_clkmode2_],eax
+		cmp	[clkmode],01b			;NOP unneeded instructions
+		jne		.notrcslow
+		mov	dword [obj+.@_ext1_],0		;RCSLOW
+		mov	dword [obj+.@_ext2_],0
+		mov	dword [obj+.@_ext3_],0
+		jmp		.nopdone
+.notrcslow:	mov	dword [obj+.@_rcslow_],0	;not RCSLOW
+.nopdone:
+		mov	eax,[clkmode]			;install _clkmode2_
+		mov	dword [obj+.@_clkmode2_],eax
 
-		and	al,0FCh					;install _clkmode1_
-		mov	[dword obj+@@_clkmode1_],eax
+		and	al,0FCh				;install _clkmode1_
+		mov	dword [obj+.@_clkmode1_],eax
 
-		mov	eax,[obj_ptr]				;install _appblocks_
+		mov	eax,[obj_ptr]			;install _appblocks_
 		shr	eax,9+2
 		inc	eax
-		mov	[dword obj+@@_appblocks_],eax
+		mov	dword [obj+.@_appblocks_],eax
 
-@@done:		ret
+.done:		ret
 
 
-@@_ext1_	=	000h
-@@_ext2_	=	004h
-@@_ext3_	=	008h
-@@_rcslow_	=	028h
-@@_clkmode1_	=	034h
-@@_clkmode2_	=	038h
-@@_appblocks_	=	03Ch
+.@_ext1_	=	000h
+.@_ext2_	=	004h
+.@_ext3_	=	008h
+.@_rcslow_	=	028h
+.@_clkmode1_	=	034h
+.@_clkmode2_	=	038h
+.@_appblocks_	=	03Ch
 
-clock_setter:	include	"clock_setter.inc"
+clock_setter:	file	"clock_setter.obj"
 clock_setter_end:
 ;
 ;
@@ -6162,12 +6173,12 @@ move_obj_up:	push	ecx
 ;
 pad_obj_long:	push	eax
 
-@@align:	test	[obj_ptr],11b
-		jz	@@aligned
+.align:	test	[obj_ptr],11b
+		jz		.aligned
 		mov	al,0
 		call	enter_obj
-		jmp	@@align
-@@aligned:
+		jmp		.align
+.aligned:
 		pop	eax
 		ret
 ;
@@ -6178,48 +6189,48 @@ point_to_con:	call	reset_element		;reset element
 
 		mov	dl,block_con		;scan for con block
 		call	next_block
-		jc	@@exit			;if not found, exit
+		jc	.exit		;if not found, exit
 
 		push	[source_start]		;else, set source pointers
 		pop	[source_finish]
 
-@@exit:		ret
+.exit:		ret
 ;
 ;
 ; Determine clock mode and frequency
 ;
 determine_clock:
 
-		lea	esi,[@@clkmode_]	;look for CLKMODE_ symbol (shouldn't exist)
-		call	@@findsymbol
+		lea	esi,[.@clkmode_]	;look for CLKMODE_ symbol (shouldn't exist)
+		call		.findsymbol
 
-		lea	esi,[@@clkfreq_]	;look for CLKFREQ_ symbol (shouldn't exist)
-		call	@@findsymbol
+		lea	esi,[.@clkfreq_]	;look for CLKFREQ_ symbol (shouldn't exist)
+		call		.findsymbol
 
-		lea	esi,[@@_errfreq]	;look for _ERRFREQ symbol
-		call	@@findsymbol
-		mov	[@@errfreq],ebx
+		lea	esi,[.@_errfreq]	;look for _ERRFREQ symbol
+		call		.findsymbol
+		mov	[.@errfreq],ebx
 
-		lea	esi,[@@_clkfreq]	;look for _CLKFREQ symbol
-		call	@@findsymbol
-		mov	[@@clkfreq],ebx
+		lea	esi,[.@_clkfreq]	;look for _CLKFREQ symbol
+		call		.findsymbol
+		mov	[.@clkfreq],ebx
 
-		lea	esi,[@@_xtlfreq]	;look for _XTLFREQ symbol
-		call	@@findsymbol
-		mov	[@@xtlfreq],ebx
+		lea	esi,[.@_xtlfreq]	;look for _XTLFREQ symbol
+		call		.findsymbol
+		mov	[.@xtlfreq],ebx
 
-		lea	esi,[@@_xinfreq]	;look for _XINFREQ symbol
-		call	@@findsymbol
-		mov	[@@xinfreq],ebx
+		lea	esi,[.@_xinfreq]	;look for _XINFREQ symbol
+		call		.findsymbol
+		mov	[.@xinfreq],ebx
 
-		lea	esi,[@@_rcfast]		;look for _RCFAST symbol
-		call	@@findsymbol
+		lea	esi,[.@_rcfast]		;look for _RCFAST symbol
+		call		.findsymbol
 
-		lea	esi,[@@_rcslow]		;look for _RCSLOW symbol
-		call	@@findsymbol
+		lea	esi,[.@_rcslow]		;look for _RCSLOW symbol
+		call		.findsymbol
 
 
-		mov	al,[@@flags]		;determine setup (eight flags in @@flags, so no need to mask)
+		mov	al,[.@flags]		;determine setup (eight flags in .@flags, so no need to mask)
 
 		test	al,11000000b		;make sure neither CLKMODE_ nor CLKFREQ_ were declared
 		jnz	error_cccbd
@@ -6228,125 +6239,127 @@ determine_clock:
 		and	ah,011111b		;hide _ERRFREQ in ah to reduce comparisons
 
 		cmp	ah,010000b		;_CLKFREQ ?		+ _ERRFREQ optional
-		je	@@clk
+		je		.clk
 
 		cmp	ah,011000b		;_CLKFREQ + _XTLFREQ ?	+ _ERRFREQ optional
-		je	@@clk_xtl
+		je		.clk_xtl
 
 		cmp	ah,010100b		;_CLKFREQ + _XINFREQ ?	+ _ERRFREQ optional
-		je	@@clk_xin
+		je		.clk_xin
 
 		cmp	al,001000b		;_XTLFREQ ?
-		je	@@xtl
+		je		.xtl
 
 		cmp	al,000100b		;_XINFREQ ?
-		je	@@xin
+		je		.xin
 
 		cmp	al,000010b		;_RCFAST ?
-		je	@@rcf
+		je		.rcf
 
 		cmp	al,000001b		;_RCSLOW ?
-		je	@@rcs
+		je		.rcs
 
 		cmp	al,000000b		;if no symbol, use _RCFAST
-		je	@@rcf
+		je		.rcf
 
 		jmp	error_codcssf
 
 
-@@clk:		mov	[clkmode],1011b		;_CLKFREQ	(assumes 20 MHz crystal)
+.clk:		mov	[clkmode],1011b		;_CLKFREQ	(assumes 20 MHz crystal)
 		mov	eax,20000000
-		jmp	@@pll
+		jmp		.pll
 
-@@clk_xtl:	cmp	[@@xtlfreq],16000000	;_CLKFREQ + _XTLFREQ
+.clk_xtl:	cmp	[.@xtlfreq],16000000	;_CLKFREQ + _XTLFREQ
 		mov	[clkmode],1011b
-		jae	@@pf
+		jae		.pf
 		mov	[clkmode],1111b		;_XTLFREQ < 16 MHz, use 15pF instead of 7.5pF
-@@pf:		mov	eax,[@@xtlfreq]
-		jmp	@@pll
+.pf:		mov	eax,[.@xtlfreq]
+		jmp		.pll
 
-@@clk_xin:	mov	[clkmode],0111b		;_CLKFREQ + _XINFREQ
-		mov	eax,[@@xinfreq]
-@@pll:		mov	[xinfreq],eax
-		mov	ebx,[@@clkfreq]
-		mov	ecx,[@@errfreq]
-		test	[@@flags],100000b	;if no _ERRFREQ, use default of 1 MHz (always works)
-		jnz	@@goterr
+.clk_xin:	mov	[clkmode],0111b		;_CLKFREQ + _XINFREQ
+		mov	eax,[.@xinfreq]
+.pll:		mov	[xinfreq],eax
+		mov	ebx,[.@clkfreq]
+		mov	ecx,[.@errfreq]
+		test	[.@flags],100000b	;if no _ERRFREQ, use default of 1 MHz (always works)
+		jnz		.goterr
 		mov	ecx,1000000
-@@goterr:	call	pll_calc
+.goterr:	call	pll_calc
 		jnc	error_pllscnba
 		or	[clkmode],eax
 		mov	[clkfreq],ebx
-		jmp	@@done
+		jmp		.done
 
-@@xtl:		cmp	[@@xtlfreq],16000000	;_XTLFREQ
+.xtl:		cmp	[.@xtlfreq],16000000	;_XTLFREQ
 		mov	[clkmode],1010b
-		jae	@@pf2
+		jae		.pf2
 		mov	[clkmode],1110b		;_XTLFREQ < 16 MHz, use 15pF instead of 7.5pF
-@@pf2:		mov	eax,[@@xtlfreq]
+.pf2:		mov	eax,[.@xtlfreq]
 		mov	[clkfreq],eax
 		mov	[xinfreq],eax
-		jmp	@@done
+		jmp		.done
 
-@@xin:		mov	[clkmode],0110b		;_XINFREQ
-		mov	eax,[@@xinfreq]
+.xin:		mov	[clkmode],0110b		;_XINFREQ
+		mov	eax,[.@xinfreq]
 		mov	[clkfreq],eax
 		mov	[xinfreq],eax
-		jmp	@@done
+		jmp		.done
 
-@@rcf:		mov	[clkmode],0000b		;_RCFAST	(default)
+.rcf:		mov	[clkmode],0000b		;_RCFAST	(default)
 		mov	[clkfreq],20000000
 		mov	[xinfreq],0
-		jmp	@@done
+		jmp		.done
 
-@@rcs:		mov	[clkmode],0001b		;_RCSLOW
+.rcs:		mov	[clkmode],0001b		;_RCSLOW
 		mov	[clkfreq],20000
 		mov	[xinfreq],0
 
 
-@@done:		mov	al,type_con		;enter CLKMODE_ symbol
+.done:		mov	al,type_con		;enter CLKMODE_ symbol
 		mov	ebx,[clkmode]
-		lea	esi,[@@clkmode_]
-		call	@@entersymbol
+		lea	esi,[.@clkmode_]
+		call		.entersymbol
 
 		mov	al,type_con		;enter CLKFREQ_ symbol
 		mov	ebx,[clkfreq]
-		lea	esi,[@@clkfreq_]
-		jmp	@@entersymbol
+		lea	esi,[.@clkfreq_]
+		jmp		.entersymbol
 
 
-@@findsymbol:	lea	edi,[symbol]		;find symbol and set 'defined' flag if found
+.findsymbol:	lea	edi,[symbol]		;find symbol and set 'defined' flag if found
 		mov	ecx,symbol_limit+1
 	rep	movsb
 		call	find_symbol
 		cmp	al,type_undefined
-		je	@@findsymbol2
+		je		.findsymbol2
 		cmp	al,type_con
 		jne	error_cfcobd
 		stc
-@@findsymbol2:	rcl	[@@flags],1
+.findsymbol2:	rcl	[.@flags],1
 		ret
 
-@@entersymbol:	lea	edi,[symbol2]		;enter symbol
+.entersymbol:	lea	edi,[symbol2]		;enter symbol
 		mov	ecx,symbol_limit+1
 	rep	movsb
 		jmp	enter_symbol2_print
 
 
-@@clkmode_	db	'CLKMODE_',0
-@@clkfreq_	db	'CLKFREQ_',0
-@@_errfreq	db	'_ERRFREQ',0
-@@_clkfreq	db	'_CLKFREQ',0
-@@_xtlfreq	db	'_XTLFREQ',0
-@@_xinfreq	db	'_XINFREQ',0
-@@_rcfast	db	'_RCFAST',0
-@@_rcslow	db	'_RCSLOW',0
+.@clkmode_	db	'CLKMODE_',0
+.@clkfreq_	db	'CLKFREQ_',0
+.@_errfreq	db	'_ERRFREQ',0
+.@_clkfreq	db	'_CLKFREQ',0
+.@_xtlfreq	db	'_XTLFREQ',0
+.@_xinfreq	db	'_XINFREQ',0
+.@_rcfast	db	'_RCFAST',0
+.@_rcslow	db	'_RCSLOW',0
 
-dbx		@@flags
-ddx		@@errfreq
-ddx		@@clkfreq
-ddx		@@xtlfreq
-ddx		@@xinfreq
+		udataseg
+dbx		.@flags
+ddx		.@errfreq
+ddx		.@clkfreq
+ddx		.@xtlfreq
+ddx		.@xinfreq
+		codeseg
 ;
 ;
 ; Calculate PLL setting
@@ -6359,154 +6372,156 @@ ddx		@@xinfreq
 ;		ebx = actual output frequency in Hz
 ;		c = 1 if setting found
 ;
-pll_calc:	mov	[@@xinfreq],eax
-		mov	[@@clkfreq],ebx
-		mov	[@@errfreq],ecx
+pll_calc:	mov	[.@xinfreq],eax
+		mov	[.@clkfreq],ebx
+		mov	[.@errfreq],ecx
 
-		mov	[@@found],0		;clear the found flag in case no success
-		mov	[@@error],ecx		;set initial error allowance
+		mov	[.@found],0		;clear the found flag in case no success
+		mov	[.@error],ecx		;set initial error allowance
 
-		cmp	[@@xinfreq],250000	;xinfreq must be 250 KHz to 500 MHz
-		jb	@@abort
-		cmp	[@@xinfreq],500000000
-		ja	@@abort
+		cmp	[.@xinfreq],250000	;xinfreq must be 250 KHz to 500 MHz
+		jb		.abort
+		cmp	[.@xinfreq],500000000
+		ja		.abort
 
-		cmp	[@@clkfreq],3333333	;clkfreq must be 3.333333 MHz to 500 MHz
-		jb	@@abort
-		cmp	[@@clkfreq],500000000
-		ja	@@abort
+		cmp	[.@clkfreq],3333333	;clkfreq must be 3.333333 MHz to 500 MHz
+		jb		.abort
+		cmp	[.@clkfreq],500000000
+		ja		.abort
 
 
-		mov	[@@pppp],0		;sweep post divider from 1,2,4,6,..30
+		mov	[.@pppp],0		;sweep post divider from 1,2,4,6,..30
 
-@@loop1:	mov	eax,[@@pppp]		;determine post divider value
+.loop1:	mov	eax,[.@pppp]		;determine post divider value
 		shl	eax,1
-		jnz	@@notzero
+		jnz		.notzero
 		inc	eax
-@@notzero:	mov	[@@post],eax
+.notzero:	mov	[.@post],eax
 
-		mov	[@@divd],64		;sweep xin divider from 64 to 1
+		mov	[.@divd],64		;sweep xin divider from 64 to 1
 
-@@loop2:	mov	eax,[@@xinfreq]		;fpfd = round(xinfreq / divd)
+.loop2:	mov	eax,[.@xinfreq]		;fpfd = round(xinfreq / divd)
 		shl	eax,1			;x2 for later rounding
 		mov	edx,0			;xinfreq --> edx:eax
-		div	[@@divd]		;divide edx:eax by divd
+		div	[.@divd]		;divide edx:eax by divd
 		inc	eax			;round quotient
 		shr	eax,1
-		mov	[@@fpfd],eax
+		mov	[.@fpfd],eax
 
-		mov	eax,[@@post]		;mult = round((post * divd) * clkfreq / xinfreq)
-		mul	[@@divd]		;multiply post by divd --> eax
+		mov	eax,[.@post]		;mult = round((post * divd) * clkfreq / xinfreq)
+		mul	[.@divd]		;multiply post by divd --> eax
 		shl	eax,1			;x2 for later rounding
-		mul	[@@clkfreq]		;multiply by clkfreq --> edx:eax
-		div	[@@xinfreq]		;divide edx:eax by xinfreq
+		mul	[.@clkfreq]		;multiply by clkfreq --> edx:eax
+		div	[.@xinfreq]		;divide edx:eax by xinfreq
 		inc	eax			;round quotient
 		shr	eax,1
-		mov	[@@mult],eax
+		mov	[.@mult],eax
 
-		mov	eax,[@@xinfreq]		;fvco = round(xinfreq * mult / divd)
+		mov	eax,[.@xinfreq]		;fvco = round(xinfreq * mult / divd)
 		shl	eax,1			;x2 for later rounding
-		mul	[@@mult]		;multiply xinfreq by mult --> edx:eax
-		cmp	[@@divd],edx		;if divd > edx then safe to divide
-		ja	@@safe
+		mul	[.@mult]		;multiply xinfreq by mult --> edx:eax
+		cmp	[.@divd],edx		;if divd > edx then safe to divide
+		ja		.safe
 		mov	eax,0			;else, fvco = 0
-		jmp	@@unsafe
-@@safe:		div	[@@divd]		;divide edx:eax by divd
+		jmp		.unsafe
+.safe:		div	[.@divd]		;divide edx:eax by divd
 		inc	eax			;round quotient
 		shr	eax,1
-@@unsafe:	mov	[@@fvco],eax
+.unsafe:	mov	[.@fvco],eax
 
-		mov	eax,[@@fvco]		;fout = round(fvco / post)
+		mov	eax,[.@fvco]		;fout = round(fvco / post)
 		shl	eax,1			;x2 for later rounding
 		mov	edx,0			;fvco --> edx:eax
-		div	[@@post]		;divide edx:eax by post
+		div	[.@post]		;divide edx:eax by post
 		inc	eax			;round quotient
 		shr	eax,1
-		mov	[@@fout],eax
+		mov	[.@fout],eax
 
-		mov	eax,[@@fout]		;abse = absolute(fout - clkfreq)
-		sub	eax,[@@clkfreq]
-		jnc	@@pos
+		mov	eax,[.@fout]		;abse = absolute(fout - clkfreq)
+		sub	eax,[.@clkfreq]
+		jnc		.pos
 		neg	eax
-@@pos:		mov	[@@abse],eax
+.pos:		mov	[.@abse],eax
 
 
-		cmp	eax,[@@error]		;does this setting have lower or same error?
-		ja	@@nope
+		cmp	eax,[.@error]		;does this setting have lower or same error?
+		ja		.nope
 
-		cmp	[@@fpfd],250000		;is fpfd at least 250KHz?
-		jb	@@nope
+		cmp	[.@fpfd],250000		;is fpfd at least 250KHz?
+		jb		.nope
 
-		cmp	[@@mult],1024		;is mult 1024 or less?
-		ja	@@nope
+		cmp	[.@mult],1024		;is mult 1024 or less?
+		ja		.nope
 
-		cmp	[@@fvco],99000000	;is fvco at least 99 MHz?
-		jb	@@nope
+		cmp	[.@fvco],99000000	;is fvco at least 99 MHz?
+		jb		.nope
 
-		cmp	[@@fvco],201000000	;is fvco no more than 201 MHz?
-		jbe	@@yep
+		cmp	[.@fvco],201000000	;is fvco no more than 201 MHz?
+		jbe		.yep
 
-		mov	eax,[@@clkfreq]		;is fvco no more than clkfreq + errfreq?
-		add	eax,[@@errfreq]
-		cmp	[@@fvco],eax
-		ja	@@nope
+		mov	eax,[.@clkfreq]		;is fvco no more than clkfreq + errfreq?
+		add	eax,[.@errfreq]
+		cmp	[.@fvco],eax
+		ja		.nope
 
 
-@@yep:		mov	[@@found],1		;found the best setting so far, set flag
+.yep:		mov	[.@found],1		;found the best setting so far, set flag
 
-		mov	eax,[@@abse]		;update error to abse
-		mov	[@@error],eax
+		mov	eax,[.@abse]		;update error to abse
+		mov	[.@error],eax
 
-		mov	eax,[@@divd]		;set the divider field
+		mov	eax,[.@divd]		;set the divider field
 		dec	eax
 		shl	eax,18
-		mov	[@@mode],eax
+		mov	[.@mode],eax
 
-		mov	eax,[@@mult]		;set the multiplier field
+		mov	eax,[.@mult]		;set the multiplier field
 		dec	eax
 		shl	eax,8
-		or	[@@mode],eax
+		or	[.@mode],eax
 
-		mov	eax,[@@pppp]		;set the post divider field
+		mov	eax,[.@pppp]		;set the post divider field
 		dec	eax
 		and	eax,1111b
 		shl	eax,4
-		or	[@@mode],eax
+		or	[.@mode],eax
 
-		or	[@@mode],01000003h	;set the pll-enable bit and select the pll
+		or	[.@mode],01000003h	;set the pll-enable bit and select the pll
 
-		mov	eax,[@@fout]		;save the pll frequency
-		mov	[@@freq],eax
+		mov	eax,[.@fout]		;save the pll frequency
+		mov	[.@freq],eax
 
 
-@@nope:		dec	[@@divd]		;decrement divd and loop if not 0
-		jnz	@@loop2
+.nope:		dec	[.@divd]		;decrement divd and loop if not 0
+		jnz		.loop2
 
-		inc	[@@pppp]		;increment pppp and loop if under 16
-		cmp	[@@pppp],16
-		jb	@@loop1
+		inc	[.@pppp]		;increment pppp and loop if under 16
+		cmp	[.@pppp],16
+		jb		.loop1
 
-		mov	eax,[@@mode]		;get mode into eax
-		mov	ebx,[@@freq]		;get freq into ebx
-@@abort:	shr	[@@found],1		;get found flag into c
+		mov	eax,[.@mode]		;get mode into eax
+		mov	ebx,[.@freq]		;get freq into ebx
+.abort:	shr	[.@found],1		;get found flag into c
 		ret
 
 
-ddx		@@xinfreq
-ddx		@@clkfreq
-ddx		@@errfreq
-ddx		@@found
-ddx		@@error
-ddx		@@abse
-ddx		@@pppp
-ddx		@@post
-ddx		@@divd
-ddx		@@fpfd
-ddx		@@mult
-ddx		@@fvco
-ddx		@@fout
-ddx		@@mode
-ddx		@@freq
+		udataseg
+ddx		.@xinfreq
+ddx		.@clkfreq
+ddx		.@errfreq
+ddx		.@found
+ddx		.@error
+ddx		.@abse
+ddx		.@pppp
+ddx		.@post
+ddx		.@divd
+ddx		.@fpfd
+ddx		.@mult
+ddx		.@fvco
+ddx		.@fout
+ddx		.@mode
+ddx		.@freq
+		codeseg
 ;
 ;
 ; Print doc data
@@ -6514,28 +6529,28 @@ ddx		@@freq
 print_doc:	call	reset_element		;print any initial doc comment
 		mov	[doc_flag],0
 		mov	[doc_mode],1
-@@initial:	call	get_element
+.initial:	call	get_element
 		cmp	al,type_end
-		je	@@initial
+		je		.initial
 		cmp	[doc_flag],0		;if one found, print cr
-		je	@@noinitial
+		je		.noinitial
 		call	print_cr
-@@noinitial:	mov	[doc_mode],0
+.noinitial:	mov	[doc_mode],0
 		push	[source_start]		;save ptr after
-		pop	[@@start]
+		pop	[.@start]
 
 		call	print_string		;print object title
 		db	'Object "',0
 		lea	esi,[obj_title]
-@@title:	lodsb
+.title:	lodsb
 		cmp	al,0
-		je	@@titledone
+		je		.titledone
 		call	print_chr
-		jmp	@@title
-@@titledone:	call	print_string
+		jmp		.title
+.titledone:	call	print_string
 		db	'" Interface:',13,13,0
 
-		call	@@printall		;print interfaces
+		call	.printall	;print interfaces
 
 		call	print_string		;print statistics
 		db	13,'Program:  ',0
@@ -6551,40 +6566,40 @@ print_doc:	call	reset_element		;print any initial doc comment
 		mov	[doc_mode],1		;set doc mode
 
 		cmp	[doc_flag],0		;if doc comments, print interfaces again,
-		je	@@ret			;..this time with doc comments
+		je	.ret		;..this time with doc comments
 
 
-@@printall:	call	reset_element		;reset element
-		push	[@@start]		;point after any initial doc comment
+.printall:	call	reset_element		;reset element
+		push	[.@start]		;point after any initial doc comment
 		pop	[source_ptr]
 
-@@nextblock:	mov	dl,block_pub		;scan for pub block
+.nextblock:	mov	dl,block_pub		;scan for pub block
 		call	next_block
-		jc	@@ret			;if eof, done
+		jc	.ret		;if eof, done
 
 		cmp	[doc_mode],0		;if doc mode, print extra cr and underline
-		je	@@notdoc
+		je		.notdoc
 		call	print_cr
 		clc
-		call	@@scanint
-@@underline:	mov	al,'_'
+		call		.scanint
+.underline:	mov	al,'_'
 		call	print_chr
-		loop	@@underline
+		loop	 .underline
 		call	print_cr
-@@notdoc:
+.notdoc:
 		call	print_string		;print pub name and interface
 		db	'PUB  ',0
 		stc
-		call	@@scanint
+		call		.scanint
 
 		cmp	[doc_mode],0		;print extra cr?
-		je	@@notdoc2
+		je		.notdoc2
 		call	print_cr
-@@notdoc2:
-		jmp	@@nextblock
+.notdoc2:
+		jmp		.nextblock
 
 
-@@scanint:	rcl	dl,1			;scan/print interface according to c
+.scanint:	rcl	dl,1			;scan/print interface according to c
 		push	[source_ptr]		;save source_ptr
 
 		call	get_element		;name first..
@@ -6593,70 +6608,71 @@ print_doc:	call	reset_element		;print any initial doc comment
 		sub	ecx,esi
 		push	ecx
 		add	esi,[source]
-@@scanname:	lodsb
-		call	@@scanprint2
-		loop	@@scanname
+.scanname:	lodsb
+		call		.scanprint2
+		loop	 .scanname
 		pop	ecx
 
-		call	@@scanskip		;..then any parameters
+		call	.scanskip	;..then any parameters
 		cmp	al,'('
-		jne	@@scancolon2
-		call	@@scanprint
+		jne		.scancolon2
+		call		.scanprint
 
-@@scanpar:	call	@@scanskip
-@@scanpar2:	call	@@scanprint
+.scanpar:	call		.scanskip
+.scanpar2:	call		.scanprint
 		cmp	al,')'
-		je	@@scancolon
+		je		.scancolon
 		cmp	al,','
-		jne	@@scanpar
+		jne		.scanpar
 		mov	al,' '
-		jmp	@@scanpar2
+		jmp		.scanpar2
 
-@@scancolon:	call	@@scanskip		;..then any result(s)
-@@scancolon2:	cmp	al,':'
-		jne	@@scancr
+.scancolon:	call	.scanskip	;..then any result(s)
+.scancolon2:	cmp	al,':'
+		jne		.scancr
 		mov	al,' '
-		call	@@scanprint
+		call		.scanprint
 		mov	al,':'
-		call	@@scanprint
+		call		.scanprint
 		mov	al,' '
-		call	@@scanprint
+		call		.scanprint
 
-@@scanresult:	call	@@scanskip
-@@scanresultc:	call	@@scanprint
-		mov	al,[byte esi]
+.scanresult:	call		.scanskip
+.scanresultc:	call		.scanprint
+		mov	al,byte [esi]
 		call	check_word_chr
 		lodsb
-		jnc	@@scanresultc
+		jnc		.scanresultc
 		dec	esi
-		call	@@scanskip
+		call		.scanskip
 		cmp	al,','
-		jne	@@scanresultx
-		call	@@scanprint
+		jne		.scanresultx
+		call		.scanprint
 		mov	al,' '
-		call	@@scanprint
-		jmp	@@scanresult
-@@scanresultx:
-@@scancr:	pop	[source_ptr]		;done, restore source_ptr
+		call		.scanprint
+		jmp		.scanresult
+.scanresultx:
+.scancr:	pop	[source_ptr]		;done, restore source_ptr
 		add	ecx,4			;account for 'PUB  ' - cr
 		mov	al,13			;print cr
 
-@@scanprint:	inc	ecx			;inc chr counter
-@@scanprint2:	test	dl,1			;print depending on mode
+.scanprint:	inc	ecx			;inc chr counter
+.scanprint2:	test	dl,1			;print depending on mode
 		jnz	print_chr
 
-@@ret:		ret
+.ret:		ret
 
 
-@@scanskip:	lodsb				;skip any whitespace
+.scanskip:	lodsb				;skip any whitespace
 		cmp	al,' '
-		je	@@scanskip
+		je		.scanskip
 		cmp	al,9
-		je	@@scanskip
+		je		.scanskip
 		ret
 
-
-ddx		@@start
+		udataseg
+ddx		.@start
+		codeseg
 ;
 ;
 ;************************************************************************
@@ -6690,65 +6706,65 @@ distill_build:	mov	[dis_ptr],0		;reset distiller list pointer
 		mov	esi,0			;base object offset is 0
 		mov	edi,1			;initial sub-object id is 1
 
-@@record:	call	@@enter			;enter object id
+.record:	call	.enter		;enter object id
 
 		mov	eax,esi			;enter object offset
-		call	@@enter
+		call		.enter
 
 		mov	ecx,0			;count sub-objects
-@@countobjects:	test	[obj+esi+ecx*8+3],80h	;look for msb set in long
-		jnz	@@enterobjects
+.countobjects:	test	[obj+esi+ecx*8+3],80h	;look for msb set in long
+		jnz		.enterobjects
 		inc	ecx
-		jmp	@@countobjects
-@@enterobjects:	mov	eax,ecx			;enter sub-object count
-		call	@@enter
+		jmp		.countobjects
+.enterobjects:	mov	eax,ecx			;enter sub-object count
+		call		.enter
 
 		mov	ebx,ecx			;count methods
 		shl	ebx,3
 		add	ebx,esi
 		mov	eax,0
-@@countmethods:	mov	edx,[dword obj+ebx+eax*4]
+.countmethods:	mov	edx,dword [obj+ebx+eax*4]
 		or	edx,edx			;look for msb clear in long
-		jns	@@entermethods
+		jns		.entermethods
 		inc	eax
-		jmp	@@countmethods
-@@entermethods:	call	@@enter			;enter method count
+		jmp		.countmethods
+.entermethods:	call	.enter		;enter method count
 
 		mov	eax,edx			;enter object size
-		call	@@enter
+		call		.enter
 
-		jecxz	@@done			;if no sub-objects, done
+		jecxz	.done		;if no sub-objects, done
 
 		mov	edx,edi			;remember initial sub-object id
 
 		push	ecx			;enter sub-object id's
-@@id:		mov	eax,edi
-		call	@@enter
+.id:		mov	eax,edi
+		call		.enter
 		inc	edi
-		loop	@@id
+		loop	 .id
 		pop	ecx
 
 		mov	ebx,0			;enter sub-objects
-@@sub:		mov	eax,[dword obj+esi+ebx*8]
+.sub:		mov	eax,dword [obj+esi+ebx*8]
 		push	ebx
 		push	ecx
 		push	edx
 		push	esi
 		add	esi,eax
 		mov	eax,edx
-		call	@@record		;recursively call @@record to enter any sub-objects' sub-object records
+		call	.record	;recursively call .recordto enter any sub-objects' sub-object records
 		pop	esi
 		pop	edx
 		pop	ecx
 		pop	ebx
 		inc	ebx
 		inc	edx
-		loop	@@sub
+		loop	 .sub
 
-@@done:		ret
+.done:		ret
 
 
-@@enter:	mov	ebx,[dis_ptr]		;enter long into distiller list
+.enter:	mov	ebx,[dis_ptr]		;enter long into distiller list
 		cmp	ebx,distiller_limit*4
 		je	error_odo
 		mov	[dis+ebx],eax
@@ -6760,7 +6776,7 @@ distill_build:	mov	[dis_ptr],0		;reset distiller list pointer
 ;
 distill_scrub:	mov	ebx,0			;start with base object
 
-@@clear:	mov	esi,[dis+ebx+4]		;get object offset
+.clear:	mov	esi,[dis+ebx+4]		;get object offset
 		mov	ecx,[dis+ebx+8]		;get sub-object count
 
 		mov	eax,ecx			;advance pointer to next object record
@@ -6768,15 +6784,15 @@ distill_scrub:	mov	ebx,0			;start with base object
 		add	eax,5 shl 2
 		add	ebx,eax
 
-		jecxz	@@none			;if no sub-objects, no offsets to clear
+		jecxz	.none		;if no sub-objects, no offsets to clear
 
 		mov	eax,0			;clear sub-object offset(s)
-@@zero:		mov	[dword obj+esi+eax*8],0	
+.zero:		mov	dword [obj+esi+eax*8],0	
 		inc	eax
-		loop	@@zero
+		loop	 .zero
 
-@@none:		cmp	ebx,[dis_ptr]		;finished?
-		jne	@@clear
+.none:		cmp	ebx,[dis_ptr]		;finished?
+		jne		.clear
 
 		ret
 ;
@@ -6787,49 +6803,49 @@ distill_eliminate:
 
 		mov	ebx,0			;start with base object
 
-@@newobject:	mov	ecx,[dis+ebx+8]		;if sub-object count is 0
-		jecxz	@@search		;..or all sub-object id's have msb set,
+.newobject:	mov	ecx,[dis+ebx+8]		;if sub-object count is 0
+		jecxz	.search	;..or all sub-object id's have msb set,
 		lea	esi,[dis+ebx+20]	;..then search for match
-@@msb:		lodsd
+.msb:		lodsd
 		or	eax,eax
-		jns	@@nextobject
-		loop	@@msb
+		jns		.nextobject
+		loop	 .msb
 
-@@search:	mov	edx,ebx			;search, start from current object
+.search:	mov	edx,ebx			;search, start from current object
 
-@@checknext:	mov	eax,[dis+edx+8]		;point to next trailing object record
+.checknext:	mov	eax,[dis+edx+8]		;point to next trailing object record
 		shl	eax,2
 		add	eax,5 shl 2
 		add	edx,eax
 		cmp	edx,[dis_ptr]		;if end of trailing objects, next object
-		je	@@nextobject
+		je		.nextobject
 
 		mov	eax,[dis+ebx+16]	;do object sizes match?
 		cmp	eax,[dis+edx+16]
-		jne	@@checknext
+		jne		.checknext
 
 		mov	ecx,[dis+ebx+8]		;do sub-object counts match?
 		cmp	ecx,[dis+edx+8]
-		jne	@@checknext
+		jne		.checknext
 
-		jecxz	@@nosubs		;do sub-object id's match?
+		jecxz	.nosubs	;do sub-object id's match?
 		lea	esi,[dis+ebx+20]
 		lea	edi,[dis+edx+20]
 	repe	cmpsd
-		jne	@@checknext
-@@nosubs:
+		jne		.checknext
+.nosubs:
 		mov	esi,[dis+ebx+4]		;do object binaries match?
 		mov	edi,[dis+edx+4]
-		add	esi,offset obj
-		add	edi,offset obj
+		add	esi,obj
+		add	edi,obj
 		mov	ecx,eax
 	repe	cmpsb
-		jne	@@checknext
+		jne		.checknext
 
 		mov	eax,[dis+ebx]		;objects match, update all related sub-object id's
-		call	@@update
+		call		.update
 		mov	eax,[dis+edx]		;set msb's of id's
-		call	@@update
+		call		.update
 
 		mov	eax,[dis+ebx+8]		;remove redundant object record from list
 		shl	eax,2			;(id is no longer referenced by any record)
@@ -6844,35 +6860,35 @@ distill_eliminate:
 
 		jmp	distill_eliminate	;start over to search for next redundancy
 
-@@nextobject:	mov	eax,[dis+ebx+8]		;point to next object record
+.nextobject:	mov	eax,[dis+ebx+8]		;point to next object record
 		shl	eax,2
 		add	eax,5 shl 2
 		add	ebx,eax
 		cmp	ebx,[dis_ptr]		;if not end of objects, try next
-		jne	@@newobject
+		jne		.newobject
 
 		ret				;done, all redundancies eliminated
 
 
-@@update:	push	ebx			;update sub-object id's in records
+.update:	push	ebx			;update sub-object id's in records
 		mov	esi,0			;eax = old id, [dis+edx] points to new id
 
-@@updatenext:	add	esi,5 shl 2		;point to sub-object id's
+.updatenext:	add	esi,5 shl 2		;point to sub-object id's
 		mov	ecx,[dis+esi-12]	;get sub-object count
-		jecxz	@@updatenone		;any sub-objects to update?
+		jecxz	.updatenone	;any sub-objects to update?
 
-@@updatesub:	mov	ebx,[dis+esi]		;convert any old id's to new id's and set msb
+.updatesub:	mov	ebx,[dis+esi]		;convert any old id's to new id's and set msb
 		and	ebx,7FFFFFFFh
 		cmp	ebx,eax
-		jne	@@updatenot
+		jne		.updatenot
 		mov	ebx,[dis+edx]
 		or	ebx,80000000h
 		mov	[dis+esi],ebx
-@@updatenot:	add	esi,1 shl 2
-		loop	@@updatesub
+.updatenot:	add	esi,1 shl 2
+		loop	 .updatesub
 
-@@updatenone:	cmp	esi,[dis_ptr]		;another record to process?
-		jne	@@updatenext
+.updatenone:	cmp	esi,[dis_ptr]		;another record to process?
+		jne		.updatenext
 
 		pop	ebx
 		ret
@@ -6885,16 +6901,16 @@ distill_rebuild:
 		mov	ebx,0			;reset list ptr
 		mov	edx,0			;reset rebuild ptr
 
-@@loop:		mov	esi,edx			;copy object and update offset
+.loop:		mov	esi,edx			;copy object and update offset
 		xchg	esi,[dis+ebx+4]
-		add	esi,offset obj
-		lea	edi,[@@rebuild+edx]
+		add	esi,obj
+		lea	edi,[.@rebuild+edx]
 		mov	ecx,[dis+ebx+16]	;get object size and long align
 		test	ecx,11b
-		jz	@@pad
+		jz		.pad
 		or	ecx,11b
 		inc	ecx
-@@pad:		add	edx,ecx
+.pad:		add	edx,ecx
 	rep	movsb
 
 		mov	eax,[dis+ebx+8]		;another object?
@@ -6902,19 +6918,20 @@ distill_rebuild:
 		add	eax,5 shl 2
 		add	ebx,eax
 		cmp	ebx,[dis_ptr]
-		jne	@@loop
+		jne		.loop
 
 		mov	[obj_ptr],edx		;rebuild done, copy distilled object
 
 		mov	ecx,edx			;back to obj and update ptr
-		lea	esi,[@@rebuild]
+		lea	esi,[.@rebuild]
 		lea	edi,[obj]
 	rep	movsb
 
 		ret
 
-
-dbx		@@rebuild,obj_limit
+		udataseg
+dbx		.@rebuild,obj_limit
+		codeseg
 ;
 ;
 ; Reconnect any sub-objects
@@ -6923,26 +6940,26 @@ distill_reconnect:
 
 		mov	ebx,0			;start with base object
 
-@@obj:		mov	ecx,[dis+ebx+8]		;ecx holds number of sub-objects
-		jecxz	@@done			;if zero, nothing to do
+.obj:		mov	ecx,[dis+ebx+8]		;ecx holds number of sub-objects
+		jecxz	.done		;if zero, nothing to do
 
 		mov	edx,[dis+ebx+4]		;edx holds object offset
 		lea	esi,[dis+ebx+20]	;esi points to sub-object id's
 		lea	edi,[obj+edx]		;edi points to sub-object list within object
 
-@@sub:		lodsd				;get sub-object id
+.sub:		lodsd				;get sub-object id
 		and	eax,7FFFFFFFh
 
 		push	ecx			;find offset of sub-object
 		mov	ebx,0
-@@find:		cmp	[dis+ebx],eax
-		je	@@found
+.find:		cmp	[dis+ebx],eax
+		je		.found
 		mov	ecx,[dis+ebx+8]
 		shl	ecx,2
 		add	ecx,5 shl 2
 		add	ebx,ecx
-		jmp	@@find
-@@found:	pop	ecx
+		jmp		.find
+.found:	pop	ecx
 
 		mov	eax,[dis+ebx+4]		;enter relative offset of sub-object
 		sub	eax,edx
@@ -6950,19 +6967,19 @@ distill_reconnect:
 		stosd
 		add	edi,4
 
-		push	ecx			;call @@obj recursively to reconnect any sub-objects' sub-objects
+		push	ecx			;call .objrecursively to reconnect any sub-objects' sub-objects
 		push	edx
 		push	esi
 		push	edi
-		call	@@obj
+		call		.obj
 		pop	edi
 		pop	esi
 		pop	edx
 		pop	ecx
 
-		loop	@@sub			;loop until sub-objects reconnected
+		loop	.sub		;loop until sub-objects reconnected
 
-@@done:		ret
+.done:		ret
 ;
 ;
 ; Distiller data
@@ -6976,8 +6993,10 @@ distill_reconnect:
 ; 4:	object size
 ; 5+:	sub-object id's (if any)
 ;
+		udataseg
 ddx		dis_ptr
 ddx		dis,distiller_limit
+		codeseg
 ;
 ;
 ;************************************************************************
@@ -7029,199 +7048,199 @@ get_element:	push	ecx
 		add	esi,[source]
 		lea	edi,[symbol]		;edi points to symbol
 
-@@skip:		mov	edx,esi			;get element start into edx
+.skip:		mov	edx,esi			;get element start into edx
 
 		lodsb				;get chr
 
 		cmp	[source_flags],0	;old string?
-		jne	@@str2
+		jne		.str2
 
 		cmp	al,'"'			;new string?
-		je	@@str
+		je		.str
 
 		cmp	al,0			;end of file?
-		je	@@eof
+		je		.eof
 
 		cmp	al,13			;end of line?
-		je	@@eol
+		je		.eol
 
 		cmp	al,' '			;space or tab?
-		jbe	@@skip
+		jbe		.skip
 
 		cmp	al,"'"			;comment?
-		je	@@com
+		je		.com
 
 		cmp	al,"{"			;brace comment start?
-		je	@@bcom
+		je		.bcom
 
 		cmp	al,"}"			;unmatched brace comment end?
-		je	@@error_bcom
+		je		.error_bcom
 
 		cmp	al,'%'			;binary?
-		je	@@bin
+		je		.bin
 
 		cmp	al,'$'			;hex?
-		je	@@hex
+		je		.hex
 
 		cmp	al,'0'			;decimal?
-		jb	@@notdec
+		jb		.notdec
 		cmp	al,'9'
-		jbe	@@dec
-@@notdec:
+		jbe		.dec
+.notdec:
 		cmp	al,'.'			;continue on next line?
-		jne	@@not3dot
-		cmp	[byte esi],'.'
-		jne	@@not3dot
-		cmp	[byte esi + 1],'.'
-		jne	@@not3dot
-@@skipline:	lodsb				;skip rest of line
+		jne	.not3dot
+		cmp	byte [esi],'.'
+		jne	.not3dot
+		cmp	byte [esi+1],'.'
+		jne	.not3dot
+.skipline:	lodsb				;skip rest of line
 		cmp	al,0			;end of file?
-		je	@@eof
+		je	.eof
 		cmp	al,13			;end of line?
-		jne	@@skipline
-		jmp	@@skip			;continue on next line
-@@not3dot:
+		jne	.skipline
+		jmp	.skip			;continue on next line
+.not3dot:
 		call	check_word_chr		;symbol?
 		mov	cl,symbol_limit+1
-		jnc	@@sym2
+		jnc		.sym2
 
 		shl	eax,8			;may be non-word symbol, store 1st chr
 		lodsb				;get 2nd chr in case 2-chr symbol
 		cmp	al,' '			;if 2nd chr is white space or eol, try 1-chr
-		jbe	@@onechr
+		jbe		.onechr
 		shl	eax,8			;store 2nd chr
 		lodsb				;get 3rd chr in case 3-chr symbol
 		cmp	al,' '			;if 3rd chr is white space or eol, try 2-chr
-		jbe	@@twochr
+		jbe		.twochr
 		call	find_symbol_s3		;check if 3-chr symbol valid
-		je	@@got			;if so, got it
-@@twochr:	dec	esi			;back up source ptr for 2-chr symbol
+		je	.got		;if so, got it
+.twochr:	dec	esi			;back up source ptr for 2-chr symbol
 		shr	eax,8			;shift out white space or eol chr
 		call	find_symbol_s2		;check if 2-chr symbol valid
-		je	@@got			;if so, got it
-@@onechr:	dec	esi			;back up source ptr for 1-chr symbol
+		je	.got		;if so, got it
+.onechr:	dec	esi			;back up source ptr for 1-chr symbol
 		shr	eax,8			;shift out white space or eol chr
 		call	find_symbol_s1		;check if 1-chr symbol valid
-		je	@@got			;if so, got it
-		jmp	@@error_op		;if not, error
+		je	.got		;if so, got it
+		jmp	.error_op	;if not, error
 
-@@str:		lodsb				;new string, get first chr
-@@str2:		cmp	[source_flags],1	;old string, comma?
-		je	@@str4
+.str:		lodsb				;new string, get first chr
+.str2:		cmp	[source_flags],1	;old string, comma?
+		je		.str4
 		mov	[source_flags],ah	;reset flags
 		cmp	al,'"'			;if '"', error
-		je	@@error_str		;(first time only)
+		je	.error_str	;(first time only)
 		cmp	al,0			;if eof, error
-		je	@@error_str2
+		je		.error_str2
 		cmp	al,13			;if eol, error
-		je	@@error_str3
+		je		.error_str3
 		mov	bl,al			;return constant
 		lodsb				;if '"' next, done
 		cmp	al,'"'
-		je	@@str3
+		je		.str3
 		inc	[source_flags]		;not '"', set comma flag
 		dec	esi
-@@str3:		mov	al,type_con		;return constant
-		jmp	@@got
-@@str4:		inc	[source_flags]		;cancel comma flag
+.str3:		mov	al,type_con		;return constant
+		jmp		.got
+.str4:		inc	[source_flags]		;cancel comma flag
 		dec	esi
 		mov	al,type_comma		;return comma
-		jmp	@@got
+		jmp		.got
 
-@@com:		cmp	[byte esi],"'"		;comment, doc comment?
-		jne	@@com2
+.com:		cmp	byte [esi],"'"		;comment, doc comment?
+		jne		.com2
 
 		inc	esi			;yes, skip second "'"
 		mov	[doc_flag],1		;set doc flag
-@@doc:		lodsb				;get comment chr
+.doc:		lodsb				;get comment chr
 		cmp	al,0			;end of file?
-		je	@@com3
-		call	@@docprint		;print doc comment chr
+		je		.com3
+		call	.docprint	;print doc comment chr
 		cmp	al,13			;end of line?
-		je	@@eol
-		jmp	@@doc
+		je		.eol
+		jmp		.doc
 
-@@com2:		lodsb				;get comment chr
+.com2:		lodsb				;get comment chr
 		cmp	al,13			;end of line?
-		je	@@eol
+		je		.eol
 		cmp	al,0			;end of file?
-		jne	@@com2
-@@com3:		dec	esi			;eof, repoint to eof
-		jmp	@@eof2
+		jne		.com2
+.com3:		dec	esi			;eof, repoint to eof
+		jmp		.eof2
 
-@@bcom:		cmp	[byte esi],"{"		;brace comment, doc comment?
-		jne	@@bcom2
+.bcom:		cmp	byte [esi],"{"		;brace comment, doc comment?
+		jne		.bcom2
 
 		mov	[doc_flag],1		;yes, set doc comment flag
 		inc	esi			;skip second "{"
 		lodsb				;skip end if present
 		cmp	al,13
-		je	@@bdoc
+		je		.bdoc
 		dec	esi
-@@bdoc:		lodsb
+.bdoc:		lodsb
 		cmp	al,0
-		je	@@error_bdoc
+		je		.error_bdoc
 		cmp	al,"}"
-		jne	@@bdoc2
-		cmp	[byte esi],"}"
-		je	@@bdoc3
-@@bdoc2:	call	@@docprint
-		jmp	@@bdoc
-@@bdoc3:	inc	esi
-		jmp	@@skip			;brace doc comment done, skip
+		jne		.bdoc2
+		cmp	byte [esi],"}"
+		je		.bdoc3
+.bdoc2:	call		.docprint
+		jmp		.bdoc
+.bdoc3:	inc	esi
+		jmp	.skip		;brace doc comment done, skip
 
-@@bcom2:	inc	ebx			;brace comment, level up
-@@bcom3:	lodsb				;get comment chr
+.bcom2:	inc	ebx			;brace comment, level up
+.bcom3:	lodsb				;get comment chr
 		cmp	al,0			;if eof, error
-		je	@@error_bcom2
+		je		.error_bcom2
 		cmp	al,"{"			;level up?
-		je	@@bcom2
+		je		.bcom2
 		cmp	al,"}"			;level down?
-		jne	@@bcom3			;ignore other chrs
+		jne	.bcom3		;ignore other chrs
 		dec	ebx
-		jne	@@bcom3
-		jmp	@@skip			;brace comment done, skip
+		jne		.bcom3
+		jmp	.skip		;brace comment done, skip
 
-@@eof:		dec	esi			;end of file, repoint to eof
+.eof:		dec	esi			;end of file, repoint to eof
 		mov	edx,esi
-@@eof2:		dec	ecx			;on exit, c=1
-@@eol:		mov	al,type_end		;end of line
-		jmp	@@got
+.eof2:		dec	ecx			;on exit, c=1
+.eol:		mov	al,type_end		;end of line
+		jmp		.got
 
-@@bin:		lodsb				;% or %%?
+.bin:		lodsb				;% or %%?
 		cmp	al,'%'
-		je	@@double
+		je		.double
 
 		mov	cl,2			;% binary or $
 		call	check_digit
-		jnc	@@con
+		jnc		.con
 		dec	esi
 		mov	al,type_percent
-		jmp	@@got
+		jmp		.got
 
-@@double:	lodsb				;%% double binary
+.double:	lodsb				;%% double binary
 		mov	cl,4
 		call	check_digit
-		jnc	@@con
-		call	@@setptrs
+		jnc		.con
+		call		.setptrs
 		jmp	error_idbn
 
-@@hex:		lodsb				;$ hex or $
+.hex:		lodsb				;$ hex or $
 		mov	cl,16
 		call	check_digit
-		jnc	@@con
+		jnc		.con
 		dec	esi
 		mov	al,type_dollar
-		jmp	@@got
+		jmp		.got
 
-@@dec:		mov	cl,10			;decimal
+.dec:		mov	cl,10			;decimal
 
-@@con:		dec	esi			;back up to first digit
-@@con2:		lodsb				;get next chr
+.con:		dec	esi			;back up to first digit
+.con2:		lodsb				;get next chr
 		cmp	al,'_'			;if underscore, ignore
-		je	@@con2
+		je		.con2
 		call	check_digit		;mac digit in al into ebx
-		jc	@@con4
+		jc		.con4
 		movzx	eax,al
 		xchg	eax,ebx
 		push	edx
@@ -7231,48 +7250,48 @@ get_element:	push	ecx
 		pop	ecx
 		or	edx,edx
 		pop	edx
-		jnz	@@con3			;note overflow
+		jnz	.con3		;note overflow
 		add	ebx,eax
-		jnc	@@con2
-@@con3:		mov	ch,1
-		jmp	@@con2
-@@con4:		cmp	cl,10			;check for floating-point constant
-		jne	@@con7
+		jnc		.con2
+.con3:		mov	ch,1
+		jmp		.con2
+.con4:		cmp	cl,10			;check for floating-point constant
+		jne		.con7
 		dec	esi			;base 10, look for '.' or 'e'
 		lodsb
 		cmp	al,'.'
-		jne	@@con5
+		jne		.con5
 		lodsb				;make sure '.' followed by digit
 		dec	esi
 		call	check_digit
-		jnc	@@con6
-		jmp	@@con7
-@@con5:		call	uppercase
+		jnc		.con6
+		jmp		.con7
+.con5:		call	uppercase
 		cmp	al,'E'
-		jne	@@con7			;if neither, integer
-@@con6:		call	get_float		;get floating-point constant at edx
-		jc	@@error_flt		;invalid?
+		jne	.con7		;if neither, integer
+.con6:		call	get_float		;get floating-point constant at edx
+		jc	.error_flt	;invalid?
 		mov	eax,type_con_float	;return constant float
-		jmp	@@got
-@@con7:		dec	esi			;integer done, back up to last chr
+		jmp		.got
+.con7:		dec	esi			;integer done, back up to last chr
 		cmp	ch,0			;trap overflow
-		jne	@@error_con
+		jne		.error_con
 		mov	eax,type_con		;return constant
-		jmp	@@got
+		jmp		.got
 
-@@sym:		lodsb				;symbol, gather chrs
+.sym:		lodsb				;symbol, gather chrs
 		call	check_word_chr
-		jc	@@sym3
-@@sym2:		stosb
-		loop	@@sym
-		jmp	@@error_sym
-@@sym3:		dec	esi			;back up to non-symbol chr
+		jc		.sym3
+.sym2:		stosb
+		loop	 .sym
+		jmp		.error_sym
+.sym3:		dec	esi			;back up to non-symbol chr
 		mov	al,0			;terminate symbol
 		stosb
 		inc	[symbol_flag]		;set symbol flag
 		call	find_symbol		;find symbol
 
-@@got:		call	@@setptrs		;set pointers
+.got:		call	.setptrs	;set pointers
 
 		shl	ecx,1			;if eof, c=1
 
@@ -7283,7 +7302,7 @@ get_element:	push	ecx
 		ret
 
 
-@@setptrs:	mov	edi,[source]		;set pointers
+.setptrs:	mov	edi,[source]		;set pointers
 		sub	edx,edi
 		sub	esi,edi
 		mov	[source_start],edx
@@ -7291,42 +7310,42 @@ get_element:	push	ecx
 		mov	[source_ptr],esi
 		ret
 
-@@docprint:	cmp	[doc_mode],0		;if doc mode, print chr
+.docprint:	cmp	[doc_mode],0		;if doc mode, print chr
 		jne	print_chr
 		ret
 
 
-@@error_bcom:	call	@@setptrs		;error, brace comment end
+.error_bcom:	call	.setptrs	;error, brace comment end
 		jmp	error_bmbpbb
 
-@@error_bcom2:	dec	esi			;error, brace comment open
+.error_bcom2:	dec	esi			;error, brace comment open
 		mov	edx,esi
-		call	@@setptrs
+		call		.setptrs
 		jmp	error_erb
 
-@@error_bdoc:	dec	esi			;error, brace document comment open
+.error_bdoc:	dec	esi			;error, brace document comment open
 		mov	edx,esi
-		call	@@setptrs
+		call		.setptrs
 		jmp	error_erbb
 
-@@error_op:	call	@@setptrs		;error, unrecognized chr
+.error_op:	call	.setptrs	;error, unrecognized chr
 		jmp	error_uc
 
-@@error_str:	call	@@setptrs		;error, empty string
+.error_str:	call	.setptrs	;error, empty string
 		jmp	error_es
 
-@@error_str2:	dec	esi			;(eof, back up)
+.error_str2:	dec	esi			;(eof, back up)
 
-@@error_str3:	call	@@setptrs		;error, unterminated string
+.error_str3:	call	.setptrs	;error, unterminated string
 		jmp	error_eatq
 
-@@error_flt:	call	@@setptrs		;error, floating-point constant invalid
+.error_flt:	call	.setptrs	;error, floating-point constant invalid
 		jmp	error_fpcmbw
 
-@@error_con:	call	@@setptrs		;error, constant too large
+.error_con:	call	.setptrs	;error, constant too large
 		jmp	error_ce32b
 
-@@error_sym:	call	@@setptrs		;error, symbol too long
+.error_sym:	call	.setptrs	;error, symbol too long
 		jmp	error_sexc
 ;
 ;
@@ -7374,12 +7393,12 @@ cwc_done:	ret
 ; c=0 if valid digit
 ;
 check_digit:	call	check_hex		;0-F?
-		jc	@@error
+		jc		.error
 
 		cmp	al,cl			;below cl?
 		cmc
 
-@@error:	ret
+.error:	ret
 ;
 ;
 ; Check al for hex digit
@@ -7389,28 +7408,28 @@ check_hex:	call	uppercase
 
 		sub	al,'0'			;0-9?
 		cmp	al,9+1
-		jc	@@flip
+		jc		.flip
 
 		sub	al,'A'-'9'-1		;A-F?
 		cmp	al,0Ah
-		jc	@@done
+		jc		.done
 		cmp	al,0Fh+1
 
-@@flip:		cmc
+.flip:		cmc
 
-@@done:		ret
+.done:		ret
 ;
 ;
 ; Make al uppercase
 ;
 uppercase:	cmp	al,'a'
-		jb	@@done
+		jb		.done
 		cmp	al,'z'
-		ja	@@done
+		ja		.done
 
 		sub	al,'a'-'A'
 
-@@done:		ret
+.done:		ret
 ;
 ;
 ; Get floating-point constant at edx
@@ -7424,98 +7443,98 @@ get_float:	push	edx
 		xor	ebx,ebx			;reset mantissa
 		xor	edi,edi			;reset base10 exponent
 
-@@mantissa:	lodsb				;get chr
+.mantissa:	lodsb				;get chr
 		cmp	al,'_'			;if underscore, ignore
-		je	@@mantissa
+		je		.mantissa
 		call	check_digit		;check for digit
-		jc	@@notdigit		;not digit?
+		jc	.notdigit	;not digit?
 		cmp	dl,0			;significant digit already?
-		jne	@@digitvalid
+		jne		.digitvalid
 		cmp	al,0			;first significant digit?
-		jne	@@digitvalid
+		jne		.digitvalid
 		cmp	dh,0			;zero, if no decimal point yet, ignore
-		je	@@mantissa
+		je		.mantissa
 		dec	edi			;leading zero right of decimal point, dec exponent
-		jmp	@@mantissa		;get next chr
+		jmp	.mantissa	;get next chr
 
-@@digitvalid:	cmp	dl,9			;mac up to nine significant digits (30 bits max)
-		jne	@@significant
+.digitvalid:	cmp	dl,9			;mac up to nine significant digits (30 bits max)
+		jne		.significant
 
 		cmp	dh,0			;after nine significant digits and still no
-		jne	@@mantissa		;...decimal point, just inc exponent
+		jne	.mantissa	;...decimal point, just inc exponent
 		inc	edi
-		jmp	@@mantissa
+		jmp		.mantissa
 
-@@significant:	inc	dl			;inc significant digits
+.significant:	inc	dl			;inc significant digits
 		cmp	dh,0			;if right of decimal point, dec exponent
-		je	@@notright
+		je		.notright
 		dec	edi
-@@notright:	movzx	eax,al			;mac digit into mantissa
+.notright:	movzx	eax,al			;mac digit into mantissa
 		xchg	eax,ebx
 		push	edx
 		mul	ecx
 		pop	edx
 		add	ebx,eax
-		jmp	@@mantissa		;get next chr
+		jmp	.mantissa	;get next chr
 
 
-@@notdigit:	dec	esi			;not digit, get chr
+.notdigit:	dec	esi			;not digit, get chr
 		lodsb
 
 		cmp	al,'.'			;decimal point?
-		jne	@@notpoint
+		jne		.notpoint
 		cmp	dh,1			;if decimal point already, got constant string
-		je	@@gotconstant
+		je		.gotconstant
 		mov	dh,1			;else, set decimal point flag
-		jmp	@@mantissa		;get next chr
-@@notpoint:
+		jmp	.mantissa	;get next chr
+.notpoint:
 		call	uppercase		;'e' exponent?
 		cmp	al,'E'
-		jne	@@gotconstant		;if not, got constant
+		jne	.gotconstant	;if not, got constant
 
 		lodsb				;exponent, check for '-' or '+'
 		mov	dh,1			;set negative flag
 		cmp	al,'-'
-		je	@@expneg		;'-'?
+		je	.expneg	;'-'?
 		cmp	al,'+'
-		je	@@exppos		;'+'?
+		je	.exppos	;'+'?
 		dec	esi			;neither, positive, back up
-@@exppos:	mov	dh,0			;clear negative flag
-@@expneg:
+.exppos:	mov	dh,0			;clear negative flag
+.expneg:
 		lodsb				;get first exponent digit
 		call	check_digit
-		jc	@@error			;if invalid, error
+		jc	.error		;if invalid, error
 		mov	dl,al
-@@expdigit:	lodsb				;get any secondary exponent digits
+.expdigit:	lodsb				;get any secondary exponent digits
 		cmp	al,'_'			;if underscore, ignore
-		je	@@expdigit
+		je		.expdigit
 		call	check_digit
-		jc	@@expdone
+		jc		.expdone
 		xchg	al,dl			;mac exponent digit
 		mul	cl
 		cmp	ah,0			;if overflow, set flag
-		jne	@@expover
+		jne		.expover
 		add	dl,al
-		jnc	@@expdigit
-@@expover:	or	dh,2
-		jmp	@@expdigit
+		jnc		.expdigit
+.expover:	or	dh,2
+		jmp		.expdigit
 
-@@expdone:	test	dh,2			;exponent done
-		jnz	@@error			;if overflow, error
+.expdone:	test	dh,2			;exponent done
+		jnz	.error		;if overflow, error
 		movzx	eax,dl			;mac 'e' exponent into mantissa exponent
 		test	dh,1
-		jz	@@expnotneg
+		jz		.expnotneg
 		neg	eax
-@@expnotneg:	add	edi,eax
+.expnotneg:	add	edi,eax
 
 
-@@gotconstant:	or	ebx,ebx			;got constant string, ebx=mantissa, edi=base10 exponent
-		jz	@@done			;if mantissa 0, result 0, c=0
+.gotconstant:	or	ebx,ebx			;got constant string, ebx=mantissa, edi=base10 exponent
+		jz	.done		;if mantissa 0, result 0, c=0
 
 		mov	ecx,32			;justify mantissa and get base2 exponent
-@@justfp:	dec	ecx
+.justfp:	dec	ecx
 		shl	ebx,1
-		jnc	@@justfp
+		jnc		.justfp
 
 		add	ebx,100h		;round to nearest mantissa lsb
 		adc	ecx,0
@@ -7525,33 +7544,33 @@ get_float:	push	edx
 		mov	bl,cl
 		ror	ebx,9
 
-@@normalize:	cmp	edi,-37			;if base10 exponent < -37, normalize
-		jge	@@checkover
-		mov	eax,[@@tens]
+.normalize:	cmp	edi,-37			;if base10 exponent < -37, normalize
+		jge		.checkover
+		mov	eax,[.@tens]
 		call	fp_mul
 		mov	ebx,eax
 		add	edi,37
-		jmp	@@normalize
+		jmp		.normalize
 
-@@checkover:	cmp	edi,38			;if base10 exponent > 38, error
-		jg	@@error
+.checkover:	cmp	edi,38			;if base10 exponent > 38, error
+		jg		.error
 
-		mov	eax,[@@tens+37*4+edi*4]	;multiply float by base 10 exponent
+		mov	eax,[.@tens+37*4+edi*4]	;multiply float by base 10 exponent
 		call	fp_mul
-		jc	@@error			;overflow?
+		jc	.error		;overflow?
 
 		mov	ebx,eax			;float in ebx
-		jmp	@@done			;done, c=0
+		jmp	.done		;done, c=0
 
-@@error:	stc				;error, c=1
+.error:	stc				;error, c=1
 
-@@done:		dec	esi			;done, back up to last constant chr
+.done:		dec	esi			;done, back up to last constant chr
 
 		pop	edx
 		ret
 
 
-@@tens		dd	0.0000000000000000000000000000000000001		;1e-37 (Turbo Assembler right for exp $01+ values)
+.@tens		dd	0.0000000000000000000000000000000000001		;1e-37 (Turbo Assembler right for exp $01+ values)
 		dd	0.000000000000000000000000000000000001
 		dd	0.00000000000000000000000000000000001
 		dd	0.0000000000000000000000000000000001
@@ -7639,27 +7658,27 @@ get_column:	push	eax
 		mov	ecx,[source_start]
 		mov	esi,[source]
 
-@@find:		jecxz	@@got
+.find:		jecxz		.got
 		dec	ecx
-		cmp	[byte esi+ecx],13
-		jne	@@find
+		cmp	byte [esi+ecx],13
+		jne		.find
 		inc	ecx
-@@got:		add	esi,ecx
+.got:		add	esi,ecx
 
 		neg	ecx
 		add	ecx,[source_start]
-		jecxz	@@done
+		jecxz		.done
 
 		xor	ebx,ebx
-@@loop:		lodsb
+.loop:		lodsb
 		cmp	al,09h
-		jne	@@nottab
+		jne		.nottab
 		or	bl,07h
-@@nottab:	inc	ebx
-		loop	@@loop
+.nottab:	inc	ebx
+		loop	 .loop
 		mov	ecx,ebx
 
-@@done:		inc	ecx
+.done:		inc	ecx
 		mov	[column],ecx
 
 		pop	esi
@@ -7668,7 +7687,7 @@ get_column:	push	eax
 		pop	eax
 		ret
 
-
+		udataseg
 ddx		column
 ;
 ;
@@ -7682,6 +7701,7 @@ dbx		source_flags
 dbx		back_index
 ddx		back_ptrs,4
 dbx		back_flags,4
+		codeseg
 ;
 ;
 ;************************************************************************
@@ -7759,8 +7779,9 @@ gt_value:	mov	[exp_flags],bl		;set flags
 		pop	eax
 		ret
 
-
+		udataseg
 dbx		exp_flags
+		codeseg
 ;
 ;
 ; Try to resolve Spin2 constant expression
@@ -7800,183 +7821,184 @@ try_spin2_con_exit:
 		pop	eax
 		ret
 
-
+		udataseg
 ddx		try_spin2_con_esp
+		codeseg
 ;
 ;
 ; Resolve expression with sub-expressions
 ;
 resolve_exp:	mov	dl,ternary_precedence+1	;expression, set ternary precedence + 1
 
-@@subexp:	push	ebx			;sub-expression, maintain precedence
+.subexp:	push	ebx			;sub-expression, maintain precedence
 		push	edx
 
 		dec	dl			;lower precedence, if was 0, resolve term
-		js	@@term			;else, resolve sub-expression
+		js	.term		;else, resolve sub-expression
 
-		call	@@subexp		;resolve first sub-expression
-@@next:		call	get_element		;get ternary, binary, or <end>
+		call	.subexp	;resolve first sub-expression
+.next:		call	get_element		;get ternary, binary, or <end>
 		call	check_ternary		;ternary?
-		je	@@ternary
+		je		.ternary
 		call	check_binary		;if not binary, back up
-		jne	@@backup
+		jne		.backup
 
-		call	@@previewop		;binary, preview for indication/compliance
+		call	.previewop	;binary, preview for indication/compliance
 		cmp	bh,dl			;if not current precedence, back up
-		jne	@@backup
+		jne		.backup
 		push	[source_start]
 		push	[source_finish]
-		call	@@subexp		;resolve next sub-expression
+		call	.subexp	;resolve next sub-expression
 		pop	[source_finish]
 		pop	[source_start]
 		call	perform_binary		;perform binary operation
-		jmp	@@next			;check for next binary
+		jmp	.next		;check for next binary
 
-@@ternary:	cmp	dl,ternary_precedence	;ternary, if not ternary precedence, back up
-		jne	@@backup
+.ternary:	cmp	dl,ternary_precedence	;ternary, if not ternary precedence, back up
+		jne		.backup
 		call	resolve_exp		;got 'exp ?', get 'exp:exp'
 		call	get_colon
 		call	resolve_exp
 		sub	ecx,2			;pick result
 		cmp	[mat-4+ecx*4],0
 		mov	ebx,[mat+0+ecx*4]
-		jne	@@ternary2
+		jne		.ternary2
 		mov	ebx,[mat+4+ecx*4]
-@@ternary2:	mov	[mat-4+ecx*4],ebx
-		jmp	@@done
+.ternary2:	mov	[mat-4+ecx*4],ebx
+		jmp		.done
 
-@@term:		call	get_element		;term, get constant, unary, or '('
+.term:		call	get_element		;term, get constant, unary, or '('
 		call	check_plus		;ignore leading '+' or '+.'
-		je	@@term
+		je		.term
 		call	check_constant
-		je	@@constant
+		je		.constant
 		call	sub_to_neg
 		call	fsub_to_fneg
 		call	check_unary
-		je	@@unary
+		je		.unary
 		cmp	al,type_left
-		je	@@left
+		je		.left
 		cmp	dh,4			;syntax error or non-constant term
 		je	fail_spin2_con_exp	;if trying to resolve Spin2 constant, fail
 		jmp	error_eacuool
 
-@@constant:	call	perform_push		;constant, push onto math stack
-		jmp	@@done
+.constant:	call	perform_push		;constant, push onto math stack
+		jmp		.done
 
-@@unary:	call	@@previewop		;unary, preview for indication/compliance
+.unary:	call	.previewop	;unary, preview for indication/compliance
 		mov	dl,bh			;set unary's precedence
 		push	[source_start]
 		push	[source_finish]
-		call	@@subexp		;resolve sub-expression
+		call	.subexp	;resolve sub-expression
 		pop	[source_finish]
 		pop	[source_start]
 		call	perform_unary		;perform unary operation
-		jmp	@@done
+		jmp		.done
 
-@@left:		call	resolve_exp		;'(', resolve expression
+.left:		call	resolve_exp		;'(', resolve expression
 		call	get_right		;get ')'
-		jmp	@@done
+		jmp		.done
 
-@@backup:	call	back_element		;end of (sub-)expression, back up
+.backup:	call	back_element		;end of (sub-)expression, back up
 
-@@done:		mov	al,dh			;retain mode
+.done:		mov	al,dh			;retain mode
 		pop	edx
 		mov	dh,al
 		pop	ebx
 		ret
 
 
-@@previewop:	cmp	dh,4			;if trying to resolve Spin2 constant, exit
-		je	@@exit
+.previewop:	cmp	dh,4			;if trying to resolve Spin2 constant, exit
+		je		.exit
 
 		call	check_float		;if operator is floating-point-compatible, exit
-		je	@@exit
+		je		.exit
 
 		cmp	dh,2			;if float mode, error
 		je	error_ionaifpe
 
 		mov	dh,1			;set integer mode
 
-@@exit:		ret
+.exit:		ret
 ;
 ;
 ; Check constant
 ; z=1 if constant with value in ebx
 ;
 check_constant:	cmp	dh,4			;trying to resolve Spin2 constant?
-		jne	@@notspin2
+		jne		.notspin2
 
 		call	sub_to_neg		;-constant?
-		jne	@@spin2notneg
+		jne		.spin2notneg
 		call	get_element
 		cmp	al,type_con		;-type_con?
-		jne	@@spin2notconi
+		jne		.spin2notconi
 		neg	ebx
-		jmp	@@spin2con
-@@spin2notconi:	cmp	al,type_con_float	;-type_con_float?
-		jne	@@spin2notconf
+		jmp		.spin2con
+.spin2notconi:	cmp	al,type_con_float	;-type_con_float?
+		jne		.spin2notconf
 		xor	ebx,80000000h
-		jmp	@@spin2con
-@@spin2notconf:	call	back_element		;back up past non-constant		
+		jmp		.spin2con
+.spin2notconf:	call	back_element		;back up past non-constant		
 		call	back_element		;back up to '-'
 		call	get_element		;get '-' again
-@@spin2notneg:
+.spin2notneg:
 		cmp	al,type_con		;type_con okay
-		je	@@spin2exit
+		je		.spin2exit
 		cmp	al,type_con_float	;type_con_float okay
-		je	@@spin2exit
+		je		.spin2exit
 
 		cmp	al,type_pound		;check for #register
-		jne	@@spin2notreg
+		jne		.spin2notreg
 		call	get_element
 		cmp	al,type_dat_byte	;must be type_dat_byte..type_dat_long_res
-		jb	@@spin2regerr
+		jb		.spin2regerr
 		cmp	al,type_dat_long_res
-		ja	@@spin2regerr
+		ja		.spin2regerr
 		shr	ebx,32-12		;must be below $400
 		cmp	ebx,400h
-		jb	@@spin2con
-@@spin2regerr:	jmp	error_eregsym
-@@spin2notreg:
+		jb		.spin2con
+.spin2regerr:	jmp	error_eregsym
+.spin2notreg:
 		cmp	al,type_obj		;check for obj.constant
-		jne	@@spin2exit
+		jne		.spin2exit
 		call	check_dot		;check for '.'
 		jne	fail_spin2_con_exp	;if not '.', must be '[', not obj.constant
 		mov	eax,ebx			;get obj symbol
 		call	get_obj_symbol
 		jz	fail_spin2_con_exp	;if obj.method, not obj.constant
-@@spin2con:	cmp	al,al			;type_con/type_con_float, make z=1
-@@spin2exit:	ret
-@@notspin2:
+.spin2con:	cmp	al,al			;type_con/type_con_float, make z=1
+.spin2exit:	ret
+.notspin2:
 
 		call	sub_to_neg		;-constant?
-		jne	@@notneg
+		jne		.notneg
 		call	get_element
 		cmp	al,type_con		;-type_con?
-		jne	@@notconi
+		jne		.notconi
 		neg	ebx
-		jmp	@@chkconi
-@@notconi:	cmp	al,type_con_float	;-type_con_float?
-		jne	@@notconf
+		jmp		.chkconi
+.notconi:	cmp	al,type_con_float	;-type_con_float?
+		jne		.notconf
 		xor	ebx,80000000h
-		jmp	@@chkconf
-@@notconf:	call	back_element		;back up past non-constant		
+		jmp		.chkconf
+.notconf:	call	back_element		;back up past non-constant		
 		call	back_element		;back up to '-'
 		call	get_element		;get '-' again
-@@notneg:
+.notneg:
 		cmp	al,type_con		;constant integer?
-		jne	@@notcon
-@@chkconi:	call	@@checkint
-		jmp	@@okay
-@@notcon:
+		jne		.notcon
+.chkconi:	call		.checkint
+		jmp		.okay
+.notcon:
 		cmp	al,type_con_float	;constant float?
-		jne	@@notconfloat
-@@chkconf:	call	@@checkfloat
-		jmp	@@okay
-@@notconfloat:
+		jne		.notconfloat
+.chkconf:	call		.checkfloat
+		jmp		.okay
+.notconfloat:
 		cmp	al,type_float		;FLOAT(integer exp)?
-		jne	@@notfloat
-		call	@@checkfloat
+		jne		.notfloat
+		call		.checkfloat
 		call	get_left		;FLOAT(integer exp), get '('
 		mov	dh,1			;set integer mode
 		call	resolve_exp		;resolve integer expression
@@ -7986,17 +8008,17 @@ check_constant:	cmp	dh,4			;trying to resolve Spin2 constant?
 		dec	ecx
 		call	fp_float
 		mov	ebx,eax
-		jmp	@@okay
-@@notfloat:
+		jmp		.okay
+.notfloat:
 		cmp	al,type_round		;ROUND(float exp)?
-		jne	@@notround
-		push	offset fp_round
-		jmp	@@roundtrunc
-@@notround:
+		jne		.notround
+		push	fp_round
+		jmp		.roundtrunc
+.notround:
 		cmp	al,type_trunc		;TRUNC(float exp)?
-		jne	@@nottrunc
-		push	offset fp_trunc
-@@roundtrunc:	call	@@checkint
+		jne		.nottrunc
+		push	fp_trunc
+.roundtrunc:	call		.checkint
 		call	get_left		;get '('
 		push	[source_finish]		;save source pointer in case error
 		mov	dh,2			;set float mode
@@ -8012,139 +8034,140 @@ check_constant:	cmp	dh,4			;trying to resolve Spin2 constant?
 		call	ebx
 		jc	error_fpo		;error?
 		mov	ebx,eax
-		jmp	@@okay
-@@nottrunc:
+		jmp		.okay
+.nottrunc:
 		test	[exp_flags],10b		;if operand mode, check for local symbol
-		jz	@@notop
+		jz		.notop
 		call	check_local
-@@notop:
-		call	@@checkundef		;if undefined and not try, error
-		je	@@ret			;if undefined and try, okay
+.notop:
+		call	.checkundef	;if undefined and not try, error
+		je	.ret		;if undefined and try, okay
 
 		cmp	al,type_dollar		;allow origin ($) if operand
-		jne	@@notorg
+		jne		.notorg
 		test	[exp_flags],10b
 		jz	error_oinah
-		call	@@checkint
+		call		.checkint
 		cmp	[orgh],0		;return hub or cog origin
 		mov	ebx,[hub_org]
-		jne	@@okay
+		jne		.okay
 		mov	ebx,[cog_org]
 		shr	ebx,2
-		jmp	@@okay
-@@notorg:
+		jmp		.okay
+.notorg:
 		cmp	al,type_register	;allow register if operand
-		jne	@@notreg
+		jne		.notreg
 		test	[exp_flags],10b
 		jz	error_rinah
-		call	@@checkint
-		jmp	@@okay
-@@notreg:
+		call		.checkint
+		jmp		.okay
+.notreg:
 		cmp	[inline_flag],1		;if inline mode, remap local longs
-		jne	@@notinline
+		jne		.notinline
 		cmp	al,type_loc_byte	;local byte variable not allowed
-		je	@@locerror
+		je		.locerror
 		cmp	al,type_loc_word	;local word variable not allowed
-		je	@@locerror
+		je		.locerror
 		cmp	al,type_loc_long	;local long variable is allowed
-		jne	@@notinline
+		jne		.notinline
 		test	bl,11b			;must be long-aligned
-		jnz	@@locerror
+		jnz		.locerror
 		cmp	ebx,10h shl 2		;must be within first 16
-		jae	@@locerror
+		jae		.locerror
 		shr	ebx,2			;make into long index
 		add	ebx,inline_locals	;add inline_locals
-		jmp	@@okay
-@@locerror:	jmp	error_lvmb
-@@notinline:
+		jmp		.okay
+.locerror:	jmp	error_lvmb
+.notinline:
 		cmp	al,type_obj		;check for obj.constant
-		jne	@@notobjcon
+		jne		.notobjcon
 		call	get_dot			;get '.', no indexed method allowed here
 		mov	eax,ebx			;get obj symbol
 		call	get_obj_symbol
 		je	error_eacn		;if method, error
 		jmp	check_constant		;type_con/type_con_float, determine which one
-@@notobjcon:
+.notobjcon:
 		cmp	al,type_at		;check for @type_dat_????
-		jne	@@notat
-		call	@@checkint
+		jne		.notat
+		call		.checkint
 		call	get_element
-		call	@@checkdat		;if type_dat_????, use dat ptr
-		je	@@trim
+		call	.checkdat	;if type_dat_????, use dat ptr
+		je		.trim
 		cmp	al,type_hub_long	;accommodate clkmode/clkfreq
-		je	@@trim
-		call	@@checkundef		;if undefined and not try, error
-		je	@@ret			;if undefined and try, okay
+		je		.trim
+		call	.checkundef	;if undefined and not try, error
+		je	.ret		;if undefined and try, okay
 		jmp	error_eads		;else, error
-@@notat:
-		call	@@checkdat		;special handing for type_dat_????
-		jne	@@ret
+.notat:
+		call	.checkdat	;special handing for type_dat_????
+		jne		.ret
 
-		call	@@checkint		;type_dat_????
+		call	.checkint	;type_dat_????
 		test	[exp_flags],10b		;if not operand, use dat ptr
-		jz	@@trim
+		jz		.trim
 		cmp	ebx,0FFF00000h		;if not cog register, use dat ptr
-		jae	@@orghsymbol
+		jae		.orghsymbol
 		shr	ebx,32-12		;use org address in high bits
-		jmp	@@trim
-@@orghsymbol:	mov	[orgh_symbol_flag],1	;set orgh_symbol_flag
+		jmp		.trim
+.orghsymbol:	mov	[orgh_symbol_flag],1	;set orgh_symbol_flag
 		cmp	[pasm_mode],1		;if spin mode, add orgh_offset
-		je	@@trim
+		je		.trim
 		add	ebx,[orgh_offset]
-@@trim:		and	ebx,0FFFFFh		;trim in case dat ptr
+.trim:		and	ebx,0FFFFFh		;trim in case dat ptr
 
-@@okay:		cmp	al,al			;z=1
+.okay:		cmp	al,al			;z=1
 
-@@ret:		ret
+.ret:		ret
 
 
-@@checkdat:	test	[exp_flags],10b		;check for type_dat_???
-		jz	@@notres
+.checkdat:	test	[exp_flags],10b		;check for type_dat_???
+		jz		.notres
 		cmp	al,type_dat_long_res	;if operand mode, convert type_dat_long_res
-		jne	@@notres
+		jne		.notres
 		mov	al,type_dat_long
-@@notres:	cmp	al,type_dat_byte	;check for type_dat_????
-		jc	@@ret			;z=1 if true
+.notres:	cmp	al,type_dat_byte	;check for type_dat_????
+		jc	.ret		;z=1 if true
 		cmp	al,type_dat_long
-		jbe	@@okay
+		jbe		.okay
 		ret
 
-@@checkundef:	cmp	al,type_undefined	;check for undefined
-		jne	@@ret			;if not undefined, z=0
+.checkundef:	cmp	al,type_undefined	;check for undefined
+		jne	.ret		;if not undefined, z=0
 		or	[exp_flags],100b	;set undefined flag
 		push	[source_start]		;save symbol pointers
-		pop	[@@source_start]
+		pop	[.@source_start]
 		push	[source_finish]
-		pop	[@@source_finish]
+		pop	[.@source_finish]
 		call	check_dot		;check for apparent obj.constant
-		jne	@@notdot
+		jne		.notdot
 		push	ecx			;got '.', make sure symbol follows
 		call	get_symbol
 		pop	ecx
 		jc	error_eacn		;if no symbol after '.', error
-@@notdot:	push	[@@source_start]	;restore symbol pointers
+.notdot:	push	[.@source_start]	;restore symbol pointers
 		pop	[source_start]
-		push	[@@source_finish]
+		push	[.@source_finish]
 		pop	[source_finish]
 		test	[exp_flags],01b		;if undefined and try, z=1
-		jnz	@@okay
+		jnz		.okay
 		jmp	error_us		;else, error
 
-@@checkfloat:	cmp	dh,1			;check float mode
+.checkfloat:	cmp	dh,1			;check float mode
 		je	error_fpnaiie		;if integer mode, error
 		mov	dh,2			;set float mode
 		ret
 
-@@checkint:	cmp	dh,2			;check integer mode
+.checkint:	cmp	dh,2			;check integer mode
 		je	error_inaifpe		;if float mode, error
 		mov	dh,1			;set integer mode
 		ret
 
-
-ddx		@@source_start
-ddx		@@source_finish
+		udataseg
+ddx		.@source_start
+ddx		.@source_finish
 
 dbx		orgh_symbol_flag
+		codeseg
 ;
 ;
 ; Perform push/binary/unary operation
@@ -8162,7 +8185,7 @@ perform_binary:	dec	ecx
 
 perform_unary:	xor	eax,eax			;if undefined flag, return 0
 		test	[exp_flags],100b
-		jnz	@@got
+		jnz		.got
 
 		push	ecx
 		push	edx
@@ -8173,217 +8196,219 @@ perform_unary:	xor	eax,eax			;if undefined flag, return 0
 		mov	ecx,[mat-0+ecx*4]
 
 		movzx	ebx,bl			;call handler
-		call	[@@ops+ebx*4]
+		call	[.@ops+ebx*4]
 
 		pop	edx
 		pop	ecx
 
-@@got:		mov	[mat-4+ecx*4],eax	;store result
+.got:		mov	[mat-4+ecx*4],eax	;store result
 
 		ret
 
 
-@@ops		dd	offset @@bitnot
-		dd	offset @@neg
-		dd	offset @@fneg
-		dd	offset @@abs
-		dd	offset @@fabs
-		dd	offset @@encod
-		dd	offset @@decod
-		dd	offset @@bmask
-		dd	offset @@ones
-		dd	offset @@sqrt
-		dd	offset @@fsqrt
-		dd	offset @@qlog
-		dd	offset @@qexp
-		dd	offset @@shr
-		dd	offset @@shl
-		dd	offset @@sar
-		dd	offset @@ror
-		dd	offset @@rol
-		dd	offset @@rev
-		dd	offset @@zerox
-		dd	offset @@signx
-		dd	offset @@bitand
-		dd	offset @@bitxor
-		dd	offset @@bitor
-		dd	offset @@mul
-		dd	offset @@fmul
-		dd	offset @@div
-		dd	offset @@fdiv
-		dd	offset @@divu
-		dd	offset @@rem
-		dd	offset @@remu
-		dd	offset @@sca
-		dd	offset @@scas
-		dd	offset @@frac
-		dd	offset @@add
-		dd	offset @@fadd
-		dd	offset @@sub
-		dd	offset @@fsub
-		dd	offset @@fge
-		dd	offset @@fle
-		dd	offset @@addbits
-		dd	offset @@addpins
-		dd	offset @@lt
-		dd	offset @@flt
-		dd	offset @@ltu
-		dd	offset @@lte
-		dd	offset @@flte
-		dd	offset @@lteu
-		dd	offset @@e
-		dd	offset @@fe
-		dd	offset @@ne
-		dd	offset @@fne
-		dd	offset @@gte
-		dd	offset @@fgte
-		dd	offset @@gteu
-		dd	offset @@gt
-		dd	offset @@fgt
-		dd	offset @@gtu
-		dd	offset @@ltegt
-		dd	offset @@lognot
-		dd	offset @@logand
-		dd	offset @@logxor
-		dd	offset @@logor
+.@ops	dd 	.bitnot
+		dd	.neg
+		dd	.fneg
+		dd	.abs
+		dd	.fabs
+		dd	.encod
+		dd	.decod
+		dd	.bmask
+		dd	.ones
+		dd	.sqrt
+		dd	.fsqrt
+		dd	.qlog
+		dd	.qexp
+		dd	.shr
+		dd	.shl
+		dd	.sar
+		dd	.ror
+		dd	.rol
+		dd	.rev
+		dd	.zerox
+		dd	.signx
+		dd	.bitand
+		dd	.bitxor
+		dd	.bitor
+		dd	.mul
+		dd	.fmul
+		dd	.div
+		dd	.fdiv
+		dd	.divu
+		dd	.rem
+		dd	.remu
+		dd	.sca
+		dd	.scas
+		dd	.frac
+		dd	.add
+		dd	.fadd
+		dd	.sub
+		dd	.fsub
+		dd	.fge
+		dd	.fle
+		dd	.addbits
+		dd	.addpins
+		dd	.lt
+		dd	.flt
+		dd	.ltu
+		dd	.lte
+		dd	.flte
+		dd	.lteu
+		dd	.e
+		dd	.fe
+		dd	.ne
+		dd	.fne
+		dd	.gte
+		dd	.fgte
+		dd	.gteu
+		dd	.gt
+		dd	.fgt
+		dd	.gtu
+		dd	.ltegt
+		dd	.lognot
+		dd	.logand
+		dd	.logxor
+		dd	.logor
 
 
-@@bitnot:	not	eax			;not
+.bitnot:	not	eax			;not
 		ret
 
 
-@@neg:		jz	@@fneg			;neg, float?
+.neg:		jz	.fneg		;neg, float?
 
 		neg	eax			;neg integer
 		ret
 
-@@fneg:		xor	eax,80000000h		;neg float
+.fneg:		xor	eax,80000000h		;neg float
 		ret
 
 
-@@abs:		jz	@@fabs			;abs, float?
+.abs:		jz	.fabs		;abs, float?
 
 		or	eax,eax			;abs integer
-		jns	@@abs2
+		jns		.abs2
 		neg	eax
-@@abs2:		ret
+.abs2:		ret
 
-@@fabs:		and	eax,7FFFFFFFh		;abs float
+.fabs:		and	eax,7FFFFFFFh		;abs float
 		ret
 
 
-@@encod:	mov	ecx,31			;encod
-@@encod2:	shl	eax,1
-		jc	@@encod3
-		loop	@@encod2
-@@encod3:	mov	eax,ecx
+.encod:	mov	ecx,31			;encod
+.encod2:	shl	eax,1
+		jc		.encod3
+		loop	 .encod2
+.encod3:	mov	eax,ecx
 		ret
 
-@@decod:	mov	cl,al			;decod
+.decod:	mov	cl,al			;decod
 		mov	eax,1
 		shl	eax,cl
 		ret
 
-@@bmask:	mov	cl,al			;bmask
+.bmask:	mov	cl,al			;bmask
 		mov	eax,2
 		shl	eax,cl
 		dec	eax
 		ret
 
-@@ones:		mov	ecx,0			;ones
-@@ones2:	shl	eax,1
+.ones:		mov	ecx,0			;ones
+.ones2:	shl	eax,1
 		pushf
 		adc	ecx,0
 		popf
-		jnz	@@ones2
+		jnz		.ones2
 		mov	eax,ecx
 		ret
 
-@@sqrt:		mov	[@@t],eax		;sqrt
+.sqrt:		mov	[.@t],eax		;sqrt
 		mov	ebx,8000h
 		xor	ecx,ecx
-@@sqrt2:	or	ecx,ebx
+.sqrt2:	or	ecx,ebx
 		mov	eax,ecx
 		mul	eax
-		cmp	eax,[@@t]
-		jbe	@@sqrt3
+		cmp	eax,[.@t]
+		jbe		.sqrt3
 		xor	ecx,ebx
-@@sqrt3:	shr	ebx,1
-		jnc	@@sqrt2
+.sqrt3:	shr	ebx,1
+		jnc		.sqrt2
 		mov	eax,ecx
 		ret
 
-ddx		@@t
+		udataseg
+ddx		.@t
+		codeseg
 
-@@fsqrt:	cmp	eax,80000000h		;fsqrt
+.fsqrt:	cmp	eax,80000000h		;fsqrt
 		ja	error_fpcmbp
 		and	eax,7FFFFFFFh		;accommodate -0.0 ($80000000)
 		call	fp_sqrt
 		jc	error_fpo
 		ret
 
-@@qlog:		clc				;qlog
+.qlog:		clc				;qlog
 		jmp	resolve_hyp
 
-@@qexp:		stc				;qexp
+.qexp:		stc				;qexp
 		jmp	resolve_hyp
 
-@@shr:		shr	eax,cl			;shr
+.shr:		shr	eax,cl			;shr
 		ret
 
-@@shl:		shl	eax,cl			;shl
+.shl:		shl	eax,cl			;shl
 		ret
 
-@@sar:		sar	eax,cl			;sar
+.sar:		sar	eax,cl			;sar
 		ret
 
-@@ror:		ror	eax,cl			;ror
+.ror:		ror	eax,cl			;ror
 		ret
 
-@@rol:		rol	eax,cl			;rol
+.rol:		rol	eax,cl			;rol
 		ret
 
-@@rev:		and	ecx,1Fh			;rev
+.rev:		and	ecx,1Fh			;rev
 		inc	ecx
 		xor	ebx,ebx
-@@rev2:		shr	eax,1
+.rev2:		shr	eax,1
 		rcl	ebx,1
-		loop	@@rev2
+		loop	 .rev2
 		mov	eax,ebx
 		ret
 
-@@zerox:	not	cl			;zerox
+.zerox:	not	cl			;zerox
 		shl	eax,cl
 		shr	eax,cl
 		ret
 
-@@signx:	not	cl			;signx
+.signx:	not	cl			;signx
 		shl	eax,cl
 		sar	eax,cl
 		ret
 
-@@bitand:	and	eax,ecx			;bitand
+.bitand:	and	eax,ecx			;bitand
 		ret
 
-@@bitxor:	xor	eax,ecx			;bitxor
+.bitxor:	xor	eax,ecx			;bitxor
 		ret
 
-@@bitor:	or	eax,ecx			;bitor
+.bitor:	or	eax,ecx			;bitor
 		ret
 
 
-@@mul:		jz	@@fmul			;mul, float?
+.mul:		jz	.fmul		;mul, float?
 
 		imul	ecx			;mul integer
 		ret
 
-@@fmul:		mov	ebx,ecx			;mul float
+.fmul:		mov	ebx,ecx			;mul float
 		call	fp_mul
 		jc	error_fpo
 		ret
 
 
-@@div:		jz	@@fdiv			;div, float?
+.div:		jz	.fdiv		;div, float?
 
 		or	ecx,ecx			;div integer
 		jz	error_dbz
@@ -8391,37 +8416,37 @@ ddx		@@t
 		idiv	ecx
 		ret
 
-@@fdiv:		mov	ebx,ecx			;div float
+.fdiv:		mov	ebx,ecx			;div float
 		call	fp_div
 		jc	error_fpo
 		ret
 
 
-@@divu:		or	ecx,ecx			;divu
+.divu:		or	ecx,ecx			;divu
 		jz	error_dbz
 		xor	edx,edx
 		div	ecx
 		ret
 
-@@rem:		or	ecx,ecx			;rem
+.rem:		or	ecx,ecx			;rem
 		jz	error_dbz
 		cdq
 		idiv	ecx
 		mov	eax,edx
 		ret
 
-@@remu:		or	ecx,ecx			;remu
+.remu:		or	ecx,ecx			;remu
 		jz	error_dbz
 		xor	edx,edx
 		div	ecx
 		mov	eax,edx
 		ret
 
-@@sca:		mul	ecx			;sca
+.sca:		mul	ecx			;sca
 		mov	eax,edx
 		ret
 
-@@scas:		imul	ecx			;scas
+.scas:		imul	ecx			;scas
 		shl	eax,1
 		rcl	edx,1
 		shl	eax,1
@@ -8429,7 +8454,7 @@ ddx		@@t
 		mov	eax,edx
 		ret
 
-@@frac:		or	ecx,ecx			;frac
+.frac:		or	ecx,ecx			;frac
 		jz	error_dbz
 		cmp	eax,ecx
 		jae	error_divo
@@ -8439,185 +8464,187 @@ ddx		@@t
 		ret
 
 
-@@add:		jz	@@fadd			;add, float?
+.add:		jz	.fadd		;add, float?
 
 		add	eax,ecx			;add integer
 		ret
 
-@@fadd:		mov	ebx,ecx			;add float
+.fadd:		mov	ebx,ecx			;add float
 		call	fp_add
 		jc	error_fpo
 		ret
 
 
-@@sub:		jz	@@fsub			;sub, float?
+.sub:		jz	.fsub		;sub, float?
 
 		sub	eax,ecx			;sub integer
 		ret
 
-@@fsub:		mov	ebx,ecx			;sub float
+.fsub:		mov	ebx,ecx			;sub float
 		call	fp_sub
 		jc	error_fpo
 		ret
 
 
-@@fge:		jz	@@fgefp			;fge, float?
+.fge:		jz	.fgefp		;fge, float?
 
 		cmp	eax,ecx			;fge integer
-		jge	@@fge2
+		jge		.fge2
 		mov	eax,ecx
-@@fge2:		ret
+.fge2:		ret
 
-@@fgefp:	mov	ebx,ecx			;fge float
+.fgefp:	mov	ebx,ecx			;fge float
 		call	fp_fge
 		jc	error_fpo
 		ret
 
 
-@@fle:		jz	@@flefp			;fle, float?
+.fle:		jz	.flefp		;fle, float?
 
 		cmp	eax,ecx			;fle integer
-		jle	@@fle2
+		jle		.fle2
 		mov	eax,ecx
-@@fle2:		ret
+.fle2:		ret
 
-@@flefp:	mov	ebx,ecx			;fle float
+.flefp:	mov	ebx,ecx			;fle float
 		call	fp_fle
 		jc	error_fpo
 		ret
 
 
-@@addbits:	and	ecx,1Fh			;addbits
+.addbits:	and	ecx,1Fh			;addbits
 		shl	ecx,5
 		and	eax,1Fh
 		or	eax,ecx
 		ret
 
-@@addpins:	and	ecx,1Fh			;addpins
+.addpins:	and	ecx,1Fh			;addpins
 		shl	ecx,6
 		and	eax,3Fh
 		or	eax,ecx
 		ret
 
 
-@@flt:		cmp	al,al			;flt (z=1)
-@@lt:		mov	dl,001b			;lt
-		jmp	@@cmp
+.flt:		cmp	al,al			;flt (z=1)
+.lt:		mov	dl,001b			;lt
+		jmp		.cmp
 
-@@ltu:		mov	dl,001b			;ltu
-		jmp	@@cmpu
+.ltu:		mov	dl,001b			;ltu
+		jmp		.cmpu
 
-@@flte:		cmp	al,al			;flte (z=1)
-@@lte:		mov	dl,101b			;lte
-		jmp	@@cmp
+.flte:		cmp	al,al			;flte (z=1)
+.lte:		mov	dl,101b			;lte
+		jmp		.cmp
 
-@@lteu:		mov	dl,101b			;lteu
-		jmp	@@cmpu
+.lteu:		mov	dl,101b			;lteu
+		jmp		.cmpu
 
-@@fe:		cmp	al,al			;fe (z=1)
-@@e:		mov	dl,100b			;e
-		jmp	@@cmp
+.fe:		cmp	al,al			;fe (z=1)
+.e:		mov	dl,100b			;e
+		jmp		.cmp
 
-@@fne:		cmp	al,al			;fne (z=1)
-@@ne:		mov	dl,011b			;ne
-		jmp	@@cmp
+.fne:		cmp	al,al			;fne (z=1)
+.ne:		mov	dl,011b			;ne
+		jmp		.cmp
 
-@@fgte:		cmp	al,al			;fgte (z=1)
-@@gte:		mov	dl,110b			;gte
-		jmp	@@cmp
+.fgte:		cmp	al,al			;fgte (z=1)
+.gte:		mov	dl,110b			;gte
+		jmp		.cmp
 
-@@gteu:		mov	dl,110b			;gteu
-		jmp	@@cmpu
+.gteu:		mov	dl,110b			;gteu
+		jmp		.cmpu
 
-@@fgt:		cmp	al,al			;fgt (z=1)
-@@gt:		mov	dl,010b			;gt
-		jmp	@@cmp
+.fgt:		cmp	al,al			;fgt (z=1)
+.gt:		mov	dl,010b			;gt
+		jmp		.cmp
 
-@@gtu:		mov	dl,010b			;gtu
-		jmp	@@cmpu
+.gtu:		mov	dl,010b			;gtu
+		jmp		.cmpu
 
 
-@@ltegt:	mov	dl,011b			;ltegt, float?
-		jz	@@ltegtfp
+.ltegt:	mov	dl,011b			;ltegt, float?
+		jz		.ltegtfp
 
-		call	@@cmp			;ltegt integer
+		call	.cmp		;ltegt integer
 		test	dl,010b
-		jz	@@ltegt2
+		jz		.ltegt2
 		mov	eax,1			;greater than, make +1
-@@ltegt2:	ret
+.ltegt2:	ret
 
-@@ltegtfp:	call	@@cmp			;ltegt float
+.ltegtfp:	call	.cmp		;ltegt float
 		test	dl,001b
-		jz	@@ltegtfp2
+		jz		.ltegtfp2
 		xor	eax,80000000h		;less than, make -1.0
-@@ltegtfp2:	ret
+.ltegtfp2:	ret
 
 
-@@cmpu:		cmp	eax,ecx			;cmp unsigned (integer)
+.cmpu:		cmp	eax,ecx			;cmp unsigned (integer)
 		mov	al,001b			;less than
-		jb	@@cmp3
+		jb		.cmp3
 		mov	al,010b			;greater than
-		ja	@@cmp3
+		ja		.cmp3
 		mov	al,100b			;equal
-		jmp	@@cmp3
+		jmp		.cmp3
 
 
-@@cmp:		jz	@@fcmp			;cmp, float?
+.cmp:		jz	.fcmp		;cmp, float?
 
 		cmp	eax,ecx			;cmp integer
-@@cmp2:		mov	al,001b			;less than
-		jl	@@cmp3
+.cmp2:		mov	al,001b			;less than
+		jl		.cmp3
 		mov	al,010b			;greater than
-		jg	@@cmp3
+		jg		.cmp3
 		mov	al,100b			;equal
-@@cmp3:		and	dl,al
+.cmp3:		and	dl,al
 		movzx	eax,dl
-		jmp	@@log
+		jmp		.log
 
-@@fcmp:		mov	ebx,ecx			;cmp float
+.fcmp:		mov	ebx,ecx			;cmp float
 		call	fp_cmp
 		jc	error_fpo
-		jmp	@@cmp2
+		jmp		.cmp2
 
 
-@@lognot:	cmp	eax,1			;lognot - make 0 into -1/1.0 and non-0 into 0
+.lognot:	cmp	eax,1			;lognot - make 0 into -1/1.0 and non-0 into 0
 		mov	eax,0
 		rcl	eax,1
-		jmp	@@log
+		jmp		.log
 
 
-@@logand:	call	@@log			;logand
+.logand:	call	.log		;logand
 		and	eax,ecx
 		ret
 
-@@logxor:	call	@@log			;logxor
+.logxor:	call	.log		;logxor
 		xor	eax,ecx
 		ret
 
-@@logor:	call	@@log			;logor
+.logor:	call	.log		;logor
 		or	eax,ecx
 		ret
 
 
-@@log:		or	eax,eax			;make eax and ecx logical
-		jz	@@log2			;(0 stays 0)
+.log:		or	eax,eax			;make eax and ecx logical
+		jz	.log2		;(0 stays 0)
 		mov	eax,0FFFFFFFFh		;(non-0 becomes -1 for integer)
 		cmp	dh,2
-		jne	@@log2
+		jne		.log2
 		mov	eax,3F800000h		;(non-0 becomes 1.0 for floating-point)
-@@log2:		or	ecx,ecx
-		jz	@@log3
+.log2:		or	ecx,ecx
+		jz		.log3
 		mov	ecx,0FFFFFFFFh
 		cmp	dh,2
-		jne	@@log3
+		jne		.log3
 		mov	ecx,3F800000h
-@@log3:		ret
+.log3:		ret
 ;
 ;
 ; Expression resolver stack
 ;
 matsize		=	10h			;math stack size (long)
+		udataseg
 ddx		mat,matsize			;math stack
+		codeseg
 ;
 ;
 ; QLOG/QEXP resolver
@@ -8625,241 +8652,241 @@ ddx		mat,matsize			;math stack
 ; C=0 for QLOG
 ; C=1 for QEXP
 ;
-resolve_hyp:	rcl	[@@exp],1		;store mode
+resolve_hyp:	rcl	[.@exp],1		;store mode
 
-		test	[@@exp],1		;qlog or qexp pre-fix?
-		jnz	@@exp_pre
+		test	[.@exp],1		;qlog or qexp pre-fix?
+		jnz		.exp_pre
 
 		mov	ebx,eax			;qlog pre-fix, save ~magnitude in mag
 		mov	ecx,31
-@@getmag:	shl	ebx,1
-		jc	@@gotmag
-		loop	@@getmag
-@@gotmag:	xor	cl,1Fh
-		mov	[@@mag],cl
+.getmag:	shl	ebx,1
+		jc		.gotmag
+		loop	 .getmag
+.gotmag:	xor	cl,1Fh
+		mov	[.@mag],cl
 
 		shl	eax,cl			;init y
 		and	eax,7FFFFFFFh
 		mov	edx,0
 		shld	edx,eax,6
 		shl	eax,6
-		mov	[@@y+0],eax
-		mov	[@@y+4],edx
+		mov	[.@y+0],eax
+		mov	[.@y+4],edx
 
 		or	edx,010b shl (37-32)	;init x
-		mov	[@@x+0],eax
-		mov	[@@x+4],edx
+		mov	[.@x+0],eax
+		mov	[.@x+4],edx
 
-		mov	[@@z+0],0		;init z
-		mov	[@@z+4],0
+		mov	[.@z+0],0		;init z
+		mov	[.@z+4],0
 
-		jmp	@@iterations
+		jmp		.iterations
 
 
-@@exp_pre:	mov	ecx,eax			;qexp pre-fix, save ~exponent in mag
+.exp_pre:	mov	ecx,eax			;qexp pre-fix, save ~exponent in mag
 		shr	ecx,32-5
 		xor	cl,1Fh
-		mov	[@@mag],cl
+		mov	[.@mag],cl
 
-		mov	[@@x+0],42E61C5Ah	;init x
-		mov	[@@x+4],0000007Fh
+		mov	[.@x+0],42E61C5Ah	;init x
+		mov	[.@x+4],0000007Fh
 
-		mov	[@@y+0],0		;init y
-		mov	[@@y+4],0
+		mov	[.@y+0],0		;init y
+		mov	[.@y+4],0
 
 		and	eax,07FFFFFFh		;init z
 		mov	edx,0
 		shld	edx,eax,11
 		shl	eax,11
-		mov	[@@z+0],eax
-		mov	[@@z+4],edx
+		mov	[.@z+0],eax
+		mov	[.@z+4],edx
 
 
-@@iterations:	mov	ecx,1			;init index
+.iterations:	mov	ecx,1			;init index
 
-		call	@@sec			;sec01
-		call	@@adj_next		;adj02
-		call	@@sec			;sec02
-		call	@@adj_next		;adj03
-		call	@@sec			;sec03
-		call	@@adj_next		;adj04
-		call	@@sec			;sec04
-		call	@@sec			;sec04x
-		call	@@sec_next		;sec05
-		call	@@sec_next		;sec06
-		call	@@adj_next		;adj07
-		call	@@sec			;sec07
-		call	@@adj_next		;adj08
-		call	@@sec			;sec08
-		call	@@sec_next		;sec09
-		call	@@adj_next		;adj10
-		call	@@sec			;sec10
-		call	@@sec_next		;sec11
-		call	@@adj_next		;adj12
-		call	@@sec			;sec12
-		call	@@sec_next		;sec13
-		call	@@sec			;sec13x
-		call	@@adj_next		;adj14
-		call	@@sec			;sec14
-		call	@@sec_next		;sec15
-		call	@@adj_next		;adj16
-		call	@@sec			;sec16
-		call	@@sec_next		;sec17
-		call	@@sec_next		;sec18
-		call	@@adj_next		;adj19
-		call	@@sec			;sec19
-		call	@@adj_next		;adj20
-		call	@@sec			;sec20
-		call	@@sec_next		;sec21
-		call	@@adj_next		;adj22
-		call	@@sec			;sec22
-		call	@@adj_next		;adj23
-		call	@@sec			;sec23
-		call	@@adj_next		;adj24
-		call	@@sec			;sec24
-		call	@@adj_next		;adj25
-		call	@@sec			;sec25
-		call	@@sec_next		;sec26
-		call	@@sec_next		;sec27
-		call	@@sec_next		;sec28
-		call	@@sec_next		;sec29
-		call	@@adj_next		;adj30
-		call	@@sec			;sec30
-		call	@@sec_next		;sec31
+		call	.sec		;sec01
+		call	.adj_next	;adj02
+		call	.sec		;sec02
+		call	.adj_next	;adj03
+		call	.sec		;sec03
+		call	.adj_next	;adj04
+		call	.sec		;sec04
+		call	.sec		;sec04x
+		call	.sec_next	;sec05
+		call	.sec_next	;sec06
+		call	.adj_next	;adj07
+		call	.sec		;sec07
+		call	.adj_next	;adj08
+		call	.sec		;sec08
+		call	.sec_next	;sec09
+		call	.adj_next	;adj10
+		call	.sec		;sec10
+		call	.sec_next	;sec11
+		call	.adj_next	;adj12
+		call	.sec		;sec12
+		call	.sec_next	;sec13
+		call	.sec		;sec13x
+		call	.adj_next	;adj14
+		call	.sec		;sec14
+		call	.sec_next	;sec15
+		call	.adj_next	;adj16
+		call	.sec		;sec16
+		call	.sec_next	;sec17
+		call	.sec_next	;sec18
+		call	.adj_next	;adj19
+		call	.sec		;sec19
+		call	.adj_next	;adj20
+		call	.sec		;sec20
+		call	.sec_next	;sec21
+		call	.adj_next	;adj22
+		call	.sec		;sec22
+		call	.adj_next	;adj23
+		call	.sec		;sec23
+		call	.adj_next	;adj24
+		call	.sec		;sec24
+		call	.adj_next	;adj25
+		call	.sec		;sec25
+		call	.sec_next	;sec26
+		call	.sec_next	;sec27
+		call	.sec_next	;sec28
+		call	.sec_next	;sec29
+		call	.adj_next	;adj30
+		call	.sec		;sec30
+		call	.sec_next	;sec31
 
-		mov	cl,[@@mag]		;post-shift x and y down by ~mag
-		lea	ebx,[@@x]
-		call	@@get
-		call	@@sar
-		call	@@put
-		lea	ebx,[@@y]
-		call	@@get
-		call	@@sar
-		call	@@put
+		mov	cl,[.@mag]		;post-shift x and y down by ~mag
+		lea	ebx,[.@x]
+		call		.get
+		call		.sar
+		call		.put
+		lea	ebx,[.@y]
+		call		.get
+		call		.sar
+		call		.put
 
-		test	[@@exp],1		;qlog or qexp post-fix?
-		jnz	@@exp_post
+		test	[.@exp],1		;qlog or qexp post-fix?
+		jnz		.exp_post
 
-		mov	eax,[@@z+0]		;qlog post-fix
-		mov	edx,[@@z+4]
+		mov	eax,[.@z+0]		;qlog post-fix
+		mov	edx,[.@z+4]
 		mov	cl,9-7
-		call	@@sar
+		call		.sar
 		and	eax,0FFFFFF80h
-		movzx	ecx,[@@mag]
+		movzx	ecx,[.@mag]
 		xor	cl,1Fh
 		shl	ecx,35-32
 		add	eax,80h
 		adc	edx,ecx
-		cmp	[@@mag],0
-		jne	@@log_post
+		cmp	[.@mag],0
+		jne		.log_post
 		test	edx,1 shl (39-32)
-		jnz	@@log_post
+		jnz		.log_post
 		mov	eax,0FFFFFFFFh
 		mov	edx,eax
-@@log_post:	mov	cl,8
-		jmp	@@sar			;qlog done
+.log_post:	mov	cl,8
+		jmp	.sar		;qlog done
 
-@@exp_post:	mov	eax,[@@x+0]		;qexp post-fix
-		mov	edx,[@@x+4]
-		add	eax,[@@y+0]
-		adc	edx,[@@y+4]
+.exp_post:	mov	eax,[.@x+0]		;qexp post-fix
+		mov	edx,[.@x+4]
+		add	eax,[.@y+0]
+		adc	edx,[.@y+4]
 		add	eax,20h
 		adc	edx,0
 		mov	cl,7
-		jmp	@@sar			;qexp done
+		jmp	.sar		;qexp done
 
 
-@@sec_next:	inc	cl			;cordic iteration
+.sec_next:	inc	cl			;cordic iteration
 
-@@sec:		lea	ebx,[@@y]		;get xd
-		call	@@get
-		call	@@sar
-		lea	ebx,[@@xd]
-		call	@@put
+.sec:		lea	ebx,[.@y]		;get xd
+		call		.get
+		call		.sar
+		lea	ebx,[.@xd]
+		call		.put
 
-		lea	ebx,[@@x]		;get yd
-		call	@@get
-		call	@@sar
-		lea	ebx,[@@yd]
-		call	@@put
+		lea	ebx,[.@x]		;get yd
+		call		.get
+		call		.sar
+		lea	ebx,[.@yd]
+		call		.put
 
-		lea	ebx,[@@zdeltas-8+ecx*8]	;get zd
-		call	@@get
-		lea	ebx,[@@zd]
-		call	@@put
+		lea	ebx,[.@zdeltas-8+ecx*8]	;get zd
+		call		.get
+		lea	ebx,[.@zd]
+		call		.put
 
-		test	[@@exp],1		;qlog or qexp steering logic?
-		jnz	@@qexp
-		cmp	[@@y+4],0
-		jl	@@flip
-		jmp	@@same
-@@qexp:		cmp	[@@z+4],0
-		jl	@@same
+		test	[.@exp],1		;qlog or qexp steering logic?
+		jnz		.qexp
+		cmp	[.@y+4],0
+		jl		.flip
+		jmp		.same
+.qexp:		cmp	[.@z+4],0
+		jl		.same
 
-@@flip:		lea	ebx,[@@xd]		;negate xd/yd/zd
-		call	@@neg
-		lea	ebx,[@@yd]
-		call	@@neg
-		lea	ebx,[@@zd]
-		call	@@neg
+.flip:		lea	ebx,[.@xd]		;negate xd/yd/zd
+		call		.neg
+		lea	ebx,[.@yd]
+		call		.neg
+		lea	ebx,[.@zd]
+		call		.neg
 
-@@same:		lea	ebx,[@@xd]		;update x
-		call	@@get
-		lea	ebx,[@@x]
-		call	@@sub
+.same:		lea	ebx,[.@xd]		;update x
+		call		.get
+		lea	ebx,[.@x]
+		call		.sub
 
-		lea	ebx,[@@yd]		;update y
-		call	@@get
-		lea	ebx,[@@y]
-		call	@@sub
+		lea	ebx,[.@yd]		;update y
+		call		.get
+		lea	ebx,[.@y]
+		call		.sub
 
-		lea	ebx,[@@zd]		;update z
-		call	@@get
-		lea	ebx,[@@z]
-		jmp	@@add
-
-
-@@adj_next:	inc	cl			;cordic scale adjustment
-
-		lea	ebx,[@@x]		;update x
-		call	@@get
-		call	@@sar
-		call	@@sub
-
-		lea	ebx,[@@y]		;update y
-		call	@@get
-		call	@@sar
-		jmp	@@sub
+		lea	ebx,[.@zd]		;update z
+		call		.get
+		lea	ebx,[.@z]
+		jmp		.add
 
 
-@@get:		mov	eax,[ebx+0]		;subroutines
+.adj_next:	inc	cl			;cordic scale adjustment
+
+		lea	ebx,[.@x]		;update x
+		call		.get
+		call		.sar
+		call		.sub
+
+		lea	ebx,[.@y]		;update y
+		call		.get
+		call		.sar
+		jmp		.sub
+
+
+.get:		mov	eax,[ebx+0]		;subroutines
 		mov	edx,[ebx+4]
 		ret
 
-@@sar:		shrd	eax,edx,cl
+.sar:		shrd	eax,edx,cl
 		sar	edx,cl
 		ret
 
-@@neg:		not	[dword ebx+0]
-		not	[dword ebx+4]
-		add	[dword ebx+0],1
-		adc	[dword ebx+4],0
+.neg:		not	dword [ebx+0]
+		not	dword [ebx+4]
+		add	dword [ebx+0],1
+		adc	dword [ebx+4],0
 		ret
 
-@@add:		add	[ebx+0],eax
+.add:		add	[ebx+0],eax
 		adc	[ebx+4],edx
 		ret
 
-@@sub:		sub	[ebx+0],eax
+.sub:		sub	[ebx+0],eax
 		sbb	[ebx+4],edx
 		ret
 
-@@put:		mov	[ebx+0],eax
+.put:		mov	[ebx+0],eax
 		mov	[ebx+4],edx
 		ret
 
 
-@@zdeltas:	dq	32B803473Fh		;hyberbolic cordic deltas
+.@zdeltas	dq	32B803473Fh		;hyberbolic cordic deltas
 		dq	179538DEA7h
 		dq	0B9A2C912Fh
 		dq	05C73F7233h
@@ -8891,15 +8918,16 @@ resolve_hyp:	rcl	[@@exp],1		;store mode
 		dq	0000000171h
 		dq	00000000B9h
 
-
-dbx		@@exp
-dbx		@@mag
-ddx		@@x,2
-ddx		@@y,2
-ddx		@@z,2
-ddx		@@xd,2
-ddx		@@yd,2
-ddx		@@zd,2
+		udataseg
+dbx		.@exp
+dbx		.@mag
+ddx		.@x,2
+ddx		.@y,2
+ddx		.@z,2
+ddx		.@xd,2
+ddx		.@yd,2
+ddx		.@zd,2
+		codeseg
 ;
 ;
 ;************************************************************************
@@ -8928,10 +8956,10 @@ ddx		@@zd,2
 ;
 fp_fge:		call	fp_cmp			;compare fp eax to fb ebx, c=1 if overflow
 
-		jge	@@exit			;if fp eax < fp ebx, return fp ebx
+		jge	.exit		;if fp eax < fp ebx, return fp ebx
 		mov	eax,ebx
 
-@@exit:		ret
+.exit:		ret
 ;
 ;
 ; Floating-point fle (least(fp eax, fp ebx) -> fp eax)
@@ -8939,10 +8967,10 @@ fp_fge:		call	fp_cmp			;compare fp eax to fb ebx, c=1 if overflow
 ;
 fp_fle:		call	fp_cmp			;compare fp eax to fb ebx, c=1 if overflow
 
-		jle	@@exit			;if fp eax > fp ebx, return fp ebx
+		jle	.exit		;if fp eax > fp ebx, return fp ebx
 		mov	eax,ebx
 
-@@exit:		ret
+.exit:		ret
 ;
 ;
 ; Floating-point comparison (fp eax - fp ebx -> overflow, zero flags)
@@ -8952,12 +8980,12 @@ fp_cmp:		push	eax
 		push	ebx
 
 		call	fp_sub			;compare fp eax to fp ebx
-		jc	@@exit			;overflow?
+		jc	.exit		;overflow?
 
 		cmp	eax,0			;affect overflow and zero flags
 		clc				;c=0
 
-@@exit:		pop	ebx
+.exit:		pop	ebx
 		pop	eax
 		ret
 ;
@@ -8976,32 +9004,32 @@ fp_add:		push	ecx
 		call	fp_unpack_ebx
 
 		shr	dl,1			;perform possible mantissa negations
-		jnc	@@apos
+		jnc		.apos
 		neg	eax
-@@apos:		shr	dh,1
-		jnc	@@bpos
+.apos:		shr	dh,1
+		jnc		.bpos
 		neg	ebx
-@@bpos:
+.bpos:
 		cmp	esi,edi			;order unpacked floats by exponent
-		jge	@@order
+		jge		.order
 		xchg	eax,ebx
 		xchg	esi,edi
-@@order:
+.order:
 		mov	ecx,esi			;shift lower mantissa right by exponent difference
 		sub	ecx,edi
 		cmp	ecx,24
-		jbe	@@inrange
+		jbe		.inrange
 		xor	ebx,ebx			;out of range, clear lower mantissa
-@@inrange:	sar	ebx,cl
+.inrange:	sar	ebx,cl
 
 		add	eax,ebx			;add mantissas
 
 		cmp	eax,0			;get sign and absolutize mantissa
 		mov	dl,0
-		jge	@@rpos
+		jge		.rpos
 		mov	dl,1
 		neg	eax
-@@rpos:
+.rpos:
 		call	fp_pack_eax		;pack float, c=1 if overflow
 
 		pop	edi
@@ -9052,7 +9080,7 @@ fp_div:		push	edx
 
 		or	ebx,ebx			;check for divide by 0
 		stc
-		jz	@@exit
+		jz		.exit
 
 		xor	dl,dh			;get result sign
 
@@ -9061,19 +9089,19 @@ fp_div:		push	edx
 
 		xor	edi,edi			;divide mantissas
 		mov	dh,30
-@@div:		cmp	eax,ebx
-		jb	@@not
+.div:		cmp	eax,ebx
+		jb		.not
 		sub	eax,ebx
-@@not:		cmc
+.not:		cmc
 		rcl	edi,1
 		shl	eax,1
 		dec	dh
-		jnz	@@div
+		jnz		.div
 		mov	eax,edi
 
 		call	fp_pack_eax		;pack float, c=1 if overflow
 
-@@exit:		pop	edi
+.exit:		pop	edi
 		pop	esi
 		pop	edx
 		ret
@@ -9091,25 +9119,25 @@ fp_sqrt:	push	ecx
 
 		sub	esi,127			;unbias exponent
 		sar	esi,1			;halve root exponent
-		jc	@@odd			;if exponent was even, shift mantissa down
+		jc	.odd		;if exponent was even, shift mantissa down
 		shr	eax,1
-@@odd:		add	esi,127-1		;bias and decrement exponent to account for bit29-justification
+.odd:		add	esi,127-1		;bias and decrement exponent to account for bit29-justification
 
 		or	eax,eax			;sqrt
-		jz	@@zero
-		mov	[@@sqr],eax
+		jz		.zero
+		mov	[.@sqr],eax
 		mov	ebx,80000000h
 		xor	ecx,ecx
-@@sqrt2:	or	ecx,ebx
+.sqrt2:	or	ecx,ebx
 		mov	eax,ecx
 		mul	eax
-		cmp	edx,[@@sqr]
-		jbe	@@sqrt3
+		cmp	edx,[.@sqr]
+		jbe		.sqrt3
 		xor	ecx,ebx
-@@sqrt3:	shr	ebx,1
-		jnc	@@sqrt2
+.sqrt3:	shr	ebx,1
+		jnc		.sqrt2
 		mov	eax,ecx
-@@zero:
+.zero:
 		xor	edx,edx			;clear sign in dl.0
 		call	fp_pack_eax		;pack float, c=1 if overflow
 
@@ -9119,8 +9147,9 @@ fp_sqrt:	push	ecx
 		pop	ecx
 		ret
 
-
-ddx		@@sqr
+		udataseg
+ddx		.@sqr
+		codeseg
 ;
 ;
 ; Convert integer to floating-point (int eax -> fp eax)
@@ -9132,21 +9161,21 @@ fp_float:	push	edx
 		shr	edx,31
 
 		or	eax,eax			;if mantissa 0, result 0
-		jz	@@exit
+		jz		.exit
 
-		jns	@@pos			;absolutize mantissa
+		jns	.pos		;absolutize mantissa
 		neg	eax
-@@pos:
+.pos:
 		mov	esi,32+127		;determine exponent and mantissa
-@@exp:		dec	esi
+.exp:		dec	esi
 		shl	eax,1
-		jnc	@@exp
+		jnc		.exp
 		rcr	eax,1			;replace leading 1
 		shr	eax,2			;bit29-justify mantissa
 
 		call	fp_pack_eax		;pack float
 
-@@exit:		pop	esi
+.exit:		pop	esi
 		pop	edx
 		ret
 ;
@@ -9171,27 +9200,27 @@ fp_rt:		push	ecx
 		mov	ecx,30+127		;if exponent > 30, overflow, c=1
 		sub	ecx,esi
 		stc
-		jl	@@exit
+		jl		.exit
 		cmp	esi,-1+127		;if exponent 0..30, integer
-		jg	@@integer
+		jg		.integer
 		mov	eax,0			;if exponent < -1, zero
-		jl	@@done
+		jl		.done
 		shr	dh,1			;exponent -1, 1/2 rounds to 1
 		rcl	eax,1
-		jmp	@@neg
+		jmp		.neg
 
-@@integer:	shr	eax,cl			;in range, round and justify
+.integer:	shr	eax,cl			;in range, round and justify
 		shr	dh,1
 		adc	eax,0
 		shr	eax,1
 
-@@neg:		shr	dl,1			;negative?
-		jnc	@@pos
+.neg:		shr	dl,1			;negative?
+		jnc		.pos
 		neg	eax
-@@pos:
-@@done:		clc				;done, c=0
+.pos:
+.done:		clc				;done, c=0
 
-@@exit:		pop	esi			;c=1 if overflow
+.exit:		pop	esi			;c=1 if overflow
 		pop	edx
 		pop	ecx
 		ret
@@ -9210,20 +9239,20 @@ fp_unpack_eax:	shl	eax,1			;get sign a
 
 		shl	eax,8			;get mantissa a
 		or	esi,esi			;if exponent not 0, add msb
-		jnz	@@nz
+		jnz		.nz
 
 		or	eax,eax			;if mantissa 0, done
-		jz	@@z
+		jz		.z
 
 		inc	esi			;adjust exp and mantissa
-@@adj:		dec	esi
+.adj:		dec	esi
 		shl	eax,1
-		jnc	@@adj
+		jnc		.adj
 
-@@nz:		stc				;install/replace leading 1
+.nz:		stc				;install/replace leading 1
 		rcr	eax,1
 		shr	eax,2			;bit29-justify mantissa
-@@z:
+.z:
 		ret
 ;
 ;
@@ -9240,20 +9269,20 @@ fp_unpack_ebx:	shl	ebx,1			;get sign b
 
 		shl	ebx,8			;get mantissa b
 		or	edi,edi			;if exponent not 0, add msb
-		jnz	@@nz
+		jnz		.nz
 
 		or	ebx,ebx			;if mantissa 0, done
-		jz	@@z
+		jz		.z
 
 		inc	edi			;adjust exp and mantissa
-@@adj:		dec	edi
+.adj:		dec	edi
 		shl	ebx,1
-		jnc	@@adj
+		jnc		.adj
 
-@@nz:		stc				;install/replace leading 1
+.nz:		stc				;install/replace leading 1
 		rcr	ebx,1
 		shr	ebx,2			;bit29-justify mantissa
-@@z:
+.z:
 		ret
 ;
 ;
@@ -9263,33 +9292,33 @@ fp_unpack_ebx:	shl	ebx,1			;get sign b
 ; c=1 if overflow
 ;
 fp_pack_eax:	or	eax,eax			;if mantissa 0, result 0, c=0
-		jz	@@exit
+		jz		.exit
 
 		add	esi,3			;adjust exponent by mantissa
-@@exp:		dec	esi
+.exp:		dec	esi
 		shl	eax,1
-		jnc	@@exp
+		jnc		.exp
 
 		push	eax			;check for even mantissa and 0.500 fraction
 		and	eax,3FFh
 		cmp	eax,100h
 		pop	eax
-		jz	@@skip			;if even and 0.500, skip rounding
+		jz	.skip		;if even and 0.500, skip rounding
 		add	eax,100h		;round up by 0.500
 		adc	esi,0			;account for overflow
-@@skip:
+.skip:
 		cmp	esi,0			;if exponent > 0, pack result
-		jg	@@pack
+		jg		.pack
 
 		stc				;exponent =< 0, unnormalized mantissa
 		rcr	eax,1			;replace leading 1
-@@ushr:		or	esi,esi			;shift unnormalized mantissa right
-		jz	@@pack			;...and inc exponent until 0
+.ushr:		or	esi,esi			;shift unnormalized mantissa right
+		jz	.pack		;...and inc exponent until 0
 		shr	eax,1
 		inc	esi
-		jmp	@@ushr
+		jmp		.ushr
 
-@@pack:		shr	ah,1			;pack result
+.pack:		shr	ah,1			;pack result
 		shr	dl,1
 		rcl	ah,1
 		mov	edx,esi
@@ -9299,7 +9328,7 @@ fp_pack_eax:	or	eax,eax			;if mantissa 0, result 0, c=0
 		cmp	esi,0FFh		;c=1 if overflow
 		cmc
 
-@@exit:		ret
+.exit:		ret
 ;
 ;
 ; Restore value pointers
@@ -9313,9 +9342,10 @@ restore_value_ptrs:
 
 		ret
 
-
+		udataseg
 ddx		value_start
 ddx		value_finish
+		codeseg
 ;
 ;
 ;************************************************************************
@@ -9348,17 +9378,17 @@ compile_block:	push	eax
 		push	ebp			;push current column
 
 cb_loop:	call	get_element		;get element
-		jc	@@done			;if eof, done
+		jc	.done		;if eof, done
 		cmp	al,type_end		;if end of line, loop
 		je	cb_loop
 		cmp	al,type_block		;if block designator, back up
-		je	@@backup
+		je		.backup
 
 		call	get_column		;if same or negative indention, back up
 		pop	ebp
 		push	ebp
 		cmp	[column],ebp
-		jbe	@@backup
+		jbe		.backup
 
 		cmp	al,type_if		;'if' block?
 		je	cb_if
@@ -9379,9 +9409,9 @@ cb_loop:	call	get_element		;get element
 		call	get_end			;get end of line
 		jmp	cb_loop			;loop
 
-@@backup:	call	back_element		;back up
+.backup:	call	back_element		;back up
 
-@@done:		pop	ebp			;pop current column
+.done:		pop	ebp			;pop current column
 
 		pop	edi
 		pop	esi
@@ -9405,14 +9435,14 @@ cb_loop:	call	get_element		;get element
 ;		call	compile_block
 ;
 ;		cmp	ebx,[obj_ptr]		;if terminal obj ptr same, block empty
-;		je	@@error
+;		je		.error
 ;
 ;		pop	ecx
 ;		pop	ebx
 ;		ret
 ;
 ;
-;@@error:	mov	[source_start],ecx
+;.error:	mov	[source_start],ecx
 ;		mov	[source_finish],ecx
 ;		jmp	error_bie
 
@@ -9421,10 +9451,10 @@ cb_loop:	call	get_element		;get element
 ; Compile block - 'if' / 'ifnot'
 ;
 cb_if:		cmp	al,type_if
-		lea	ebx,[@@comp_if]
-		je	@@if
-		lea	ebx,[@@comp_ifnot]
-@@if:
+		lea	ebx,[.comp_if]
+		je		.if
+		lea	ebx,[.comp_ifnot]
+.if:
 		mov	ebp,[column]		;set new column
 
 		mov	al,type_if		;set new 'if' blocknest
@@ -9438,55 +9468,55 @@ cb_if:		cmp	al,type_if
 		jmp	cb_loop			;return to compile block loop
 
 
-@@comp_if:	mov	bl,bc_jz		;'if' entry (jz)
+.comp_if:	mov	bl,bc_jz		;'if' entry (jz)
 		mov	ecx,1			;reset address count
-		jmp	@@cond
+		jmp		.cond
 
-@@comp_ifnot:	mov	bl,bc_jnz		;'ifnot' entry (jnz)
+.comp_ifnot:	mov	bl,bc_jnz		;'ifnot' entry (jnz)
 		mov	ecx,1			;reset address count
-		jmp	@@cond
+		jmp		.cond
 
 
-@@block:	call	compile_block		;compile 'if/ifnot/elseif/elseifnot' block
+.block:	call	compile_block		;compile 'if/ifnot/elseif/elseifnot' block
 
 		call	get_element		;get next element
-		jc	@@done			;if eof, done
+		jc	.done		;if eof, done
 		call	get_column		;get column
 		cmp	[column],ebp		;if lower, done
-		jb	@@backup
+		jb		.backup
 		cmp	al,type_elseif		;same, 'elseif'?
 		mov	bl,bc_jz		;(jz)
-		je	@@elsecond
+		je		.elsecond
 		cmp	al,type_elseifnot	;same, 'elseifnot'?
 		mov	bl,bc_jnz		;(jnz)
-		je	@@elsecond
+		je		.elsecond
 		cmp	al,type_else		;same, 'else'?
-		je	@@else
-@@backup:	call	back_element		;back up, done
-		jmp	@@done
+		je		.else
+.backup:	call	back_element		;back up, done
+		jmp		.done
 
-@@elsecond:	call	@@jmpout		;'elseif/elseifnot', compile bc_jmp out
+.elsecond:	call	.jmpout	;'elseif/elseifnot', compile bc_jmp out
 		cmp	ecx,if_limit+2		;check 'if' limit
 		je	error_loxee		;(+2 accounts for 'if' and 'else' addresses)
 
-@@cond:		call	compile_exp		;compile conditional expression
+.cond:		call	compile_exp		;compile conditional expression
 		call	get_end
 		mov	eax,ecx			;compile next address
 		call	compile_bstack_branch	;(bl = jz/jnz)
-		jmp	@@block
+		jmp		.block
 
 
-@@else:		call	@@jmpout		;'else', compile bc_jmp out
+.else:		call	.jmpout	;'else', compile bc_jmp out
 		call	get_end
 		call	compile_block		;compile 'else' block
 
-@@done:		mov	eax,ecx			;set last address
+.done:		mov	eax,ecx			;set last address
 		call	write_bstack_ptr
 		mov	eax,0			;set final address
 		jmp	write_bstack_ptr	;returns to optimize_block
 
 
-@@jmpout:	push	ebx
+.jmpout:	push	ebx
 		mov	eax,0			;compile bc_jmp out
 		mov	bl,bc_jmp		;(jmp)
 		call	compile_bstack_branch
@@ -9505,14 +9535,14 @@ cb_case:	mov	ebp,[column]		;set new column
 		mov	ah,case_limit/16+1	;reserve case_limit + 16 bstack variables
 		call	new_bnest
 
-		lea	eax,[@@comp]		;optimize case block
+		lea	eax,[.comp]		;optimize case block
 		call	optimize_block
 
 		call	end_bnest		;done, end blocknest
 		jmp	cb_loop			;return to compile block loop
 
 
-@@comp:		mov	eax,0			;compile final address
+.comp:		mov	eax,0			;compile final address
 		call	compile_bstack_address
 
 		call	compile_exp		;compile target value
@@ -9522,15 +9552,15 @@ cb_case:	mov	ebp,[column]		;set new column
 		mov	ecx,0			;reset case count and 'other' block flag in ecx[31]
 
 
-@@nextcase1:	call	get_element		;first pass builds case branches, get range/value/'other'
-		jc	@@done1			;if eof, first pass done
+.nextcase1:	call	get_element		;first pass builds case branches, get range/value/'other'
+		jc	.done1		;if eof, first pass done
 		cmp	al,type_end		;ignore blank lines
-		je	@@nextcase1
+		je		.nextcase1
 
 		call	get_column		;if no indention, first pass done
 		call	back_element
 		cmp	[column],ebp
-		jbe	@@done1
+		jbe		.done1
 
 		or	ecx,ecx			;if 'other' already encountered, error
 		js	error_omblc
@@ -9539,40 +9569,40 @@ cb_case:	mov	ebp,[column]		;set new column
 		mov	ebp,[column]		;set new column
 
 		cmp	al,type_other		;'other' case?
-		jne	@@notother1
+		jne		.notother1
 		or	ecx,80000000h		;set 'other' flag
 		call	get_element		;skip 'other'
 		mov	edx,[source_start]	;save source ptr for 'other' block
-		jmp	@@getcolon		;get colon and skip instruction block
-@@notother1:
+		jmp	.getcolon	;get colon and skip instruction block
+.notother1:
 		inc	ecx			;not 'other', must be range/value, inc case count
 		mov	eax,ecx
 		and	eax,7FFFFFFFh
 		cmp	eax,case_limit		;check case limit
 		ja	error_loxcase
 
-@@nextrange:	call	compile_range		;compile value/range
+.nextrange:	call	compile_range		;compile value/range
 		mov	bl,bc_case_range	;(case range)
-		je	@@range
+		je		.range
 		mov	bl,bc_case_value	;(case value)
-@@range:	mov	eax,ecx
+.range:	mov	eax,ecx
 		and	eax,7FFFFFFFh
 		call	compile_bstack_branch	;compile branch
 		call	check_comma		;if comma, compound case
-		je	@@nextrange
+		je		.nextrange
 
-@@getcolon:	call	get_colon		;get ':' after (last) range/value or 'other'
+.getcolon:	call	get_colon		;get ':' after (last) range/value or 'other'
 		call	skip_block		;skip instruction block
 
 		pop	ebp			;restore original column
-		jmp	@@nextcase1		;get next case
-@@done1:
+		jmp	.nextcase1	;get next case
+.done1:
 
 		test	ecx,7FFFFFFFh		;second pass builds case blocks
 		jz	error_nce		;if no value/range cases, error
 
 		or	ecx,ecx			;if 'other' case, compile 'other' block after case branches
-		jns	@@noother
+		jns		.noother
 		mov	[source_ptr],edx	;set source ptr to 'other' block
 		call	get_element		;get 'other' to set column
 		call	get_column		;get column
@@ -9581,7 +9611,7 @@ cb_case:	mov	ebp,[column]		;set new column
 		mov	ebp,[column]		;get 'other' column
 		call	compile_block		;compile 'other' case block
 		pop	ebp			;restore original column
-@@noother:
+.noother:
 		mov	al,bc_case_done		;(case done) end of range/value checks
 		call	enter_obj
 
@@ -9589,29 +9619,29 @@ cb_case:	mov	ebp,[column]		;set new column
 		mov	ecx,0			;reset case count, ready to compile range/value case blocks
 
 
-@@nextcase2:	call	get_element		;get range/value column
-		jc	@@done2			;if eof, second pass done
+.nextcase2:	call	get_element		;get range/value column
+		jc	.done2		;if eof, second pass done
 		cmp	al,type_end		;ignore blank lines
-		je	@@nextcase2
+		je		.nextcase2
 
 		call	get_column		;if no indention, second pass done
 		call	back_element
 		cmp	[column],ebp
-		jbe	@@done2
+		jbe		.done2
 
 		push	ebp			;save original column
 		mov	ebp,[column]		;set new column
 
 		cmp	al,type_other		;if 'other' case, skip (already compiled)
-		jne	@@notother2
+		jne		.notother2
 		call	get_element		;skip 'other'
 		call	get_element		;skip colon
 		call	skip_block		;skip 'other' block
-		jmp	@@skipped
-@@notother2:
-@@skiprange:	call	skip_range		;skip range/value (already compiled)
+		jmp		.skipped
+.notother2:
+.skiprange:	call	skip_range		;skip range/value (already compiled)
 		call	check_comma
-		je	@@skiprange
+		je		.skiprange
 		call	get_element		;skip colon
 
 		inc	ecx			;write block address
@@ -9624,11 +9654,11 @@ cb_case:	mov	ebp,[column]		;set new column
 		mov	al,bc_case_done		;(casedone)
 		call	enter_obj
 
-@@skipped:	pop	ebp			;restore original column
-		jmp	@@nextcase2		;get next case
+.skipped:	pop	ebp			;restore original column
+		jmp	.nextcase2	;get next case
 
 
-@@done2:	mov	eax,0			;write final address
+.done2:	mov	eax,0			;write final address
 		jmp	write_bstack_ptr
 ;
 ;
@@ -9640,22 +9670,22 @@ cb_case_fast:	mov	ebp,[column]		;set new column
 		mov	ah,case_fast_limit/16+1	;reserve case_fast_limit + 16 bstack variables
 		call	new_bnest
 
-		lea	eax,[@@comp]		;optimize case_fast block
+		lea	eax,[.comp]		;optimize case_fast block
 		call	optimize_block
 
 		call	end_bnest		;done, end blocknest
 		jmp	cb_loop			;return to compile block loop
 
 
-@@final_addr	=	0
-@@table_ptr	=	1
-@@source_ptr	=	2
-@@min_value	=	3
-@@max_value	=	4
-@@table_address	=	5
+.@final_addr	=	0
+.@table_ptr	=	1
+.@source_ptr	=	2
+.@min_value	=	3
+.@max_value	=	4
+.@table_address	=	5
 
 
-@@comp:		mov	eax,@@final_addr	;compile final address
+.comp:		mov	eax,.@final_addr	;compile final address
 		call	compile_bstack_address
 
 		call	compile_exp		;compile target value
@@ -9671,18 +9701,18 @@ cb_case_fast:	mov	ebp,[column]		;set new column
 		call	enter_obj_word
 
 		mov	ebx,[obj_ptr]		;remember jump table start
-		mov	eax,@@table_ptr
+		mov	eax,.@table_ptr
 		call	write_bstack
 
 		mov	ebx,[source_ptr]	;remember source ptr
-		mov	eax,@@source_ptr
+		mov	eax,.@source_ptr
 		call	write_bstack
 
-		mov	eax,@@min_value		;reset min value
+		mov	eax,.@min_value		;reset min value
 		mov	ebx,7FFFFFFFh
 		call	write_bstack
 
-		mov	eax,@@max_value		;reset max value
+		mov	eax,.@max_value		;reset max value
 		mov	ebx,80000000h
 		call	write_bstack
 
@@ -9690,15 +9720,15 @@ cb_case_fast:	mov	ebp,[column]		;set new column
 		mov	ecx,0			;reset case count
 		mov	dl,0			;reset 'other' block flag
 
-@@nextcase1:	call	get_element		;first pass determines min and max values
-		jc	@@done1			;if eof, first pass done
+.nextcase1:	call	get_element		;first pass determines min and max values
+		jc	.done1		;if eof, first pass done
 		cmp	al,type_end		;ignore blank lines
-		je	@@nextcase1
+		je		.nextcase1
 
 		call	get_column		;if no indention, first pass done
 		call	back_element
 		cmp	[column],ebp
-		jbe	@@done1
+		jbe		.done1
 
 		cmp	dl,1			;if 'other' already encountered, error
 		je	error_omblc
@@ -9707,118 +9737,118 @@ cb_case_fast:	mov	ebp,[column]		;set new column
 		mov	ebp,[column]		;set new column
 
 		cmp	al,type_other		;'other' case?
-		jne	@@notother1
+		jne		.notother1
 		mov	dl,1			;set 'other' flag
 		call	get_element		;skip 'other'
-		jmp	@@getcolon1		;get colon and skip instruction block
-@@notother1:
+		jmp	.getcolon1	;get colon and skip instruction block
+.notother1:
 		inc	ecx			;not 'other', must be case, inc case count
 		mov	eax,ecx
 		cmp	eax,case_fast_limit	;check case_fast limit
 		ja	error_loxcasef
 
-@@nextrange1:	call	get_range		;get value/range and update min and max values
-		call	@@updateminmax
+.nextrange1:	call	get_range		;get value/range and update min and max values
+		call		.updateminmax
 		mov	eax,ebx
-		call	@@updateminmax
+		call		.updateminmax
 		call	check_comma		;if comma, compound case
-		je	@@nextrange1
+		je		.nextrange1
 
-@@getcolon1:	call	get_colon		;get ':' after (last) value/range
+.getcolon1:	call	get_colon		;get ':' after (last) value/range
 		call	skip_block		;skip instruction block
 
 		pop	ebp			;restore original column
-		jmp	@@nextcase1		;get next case
-@@done1:
+		jmp	.nextcase1	;get next case
+.done1:
 
 		cmp	ecx,0			;if no value/range cases, error
 		je	error_nce
 
-		mov	eax,@@table_ptr		;write min value into rflong position
+		mov	eax,.@table_ptr		;write min value into rflong position
 		call	read_bstack
 		push	ebx
-		mov	eax,@@min_value
+		mov	eax,.@min_value
 		call	read_bstack
 		pop	eax
-		mov	[dword obj-6+eax],ebx
+		mov	dword [obj-6+eax],ebx
 
 		push	eax			;write max-min+1 value into rfword position
 		push	ebx
-		mov	eax,@@max_value
+		mov	eax,.@max_value
 		call	read_bstack
 		pop	eax
 		sub	ebx,eax
 		inc	ebx
 		pop	eax
-		mov	[word obj-2+eax],bx
+		mov	word [obj-2+eax],bx
 
 		mov	edx,ecx			;get 'other' case in dx
 
 		mov	ecx,0			;init jump table with 'other' case
-@@inittable:	mov	[word obj+eax+ecx*2],dx
+.inittable:	mov	word [obj+eax+ecx*2],dx
 		inc	ecx
 		cmp	ecx,ebx
-		jbe	@@inittable
+		jbe		.inittable
 		shl	ecx,1			;update obj_ptr
 		add	ecx,eax
 		mov	[obj_ptr],ecx
 
-		mov	eax,@@source_ptr	;point back to source after 'case_fast' line
+		mov	eax,.@source_ptr	;point back to source after 'case_fast' line
 		call	read_bstack
 		mov	[source_ptr],ebx
 
 
 		mov	ecx,0			;reset case count
 
-@@nextcase2:	call	get_element		;second pass fills in table and compiles blocks
-		jc	@@done2			;if eof, second pass done
+.nextcase2:	call	get_element		;second pass fills in table and compiles blocks
+		jc	.done2		;if eof, second pass done
 		cmp	al,type_end		;ignore blank lines
-		je	@@nextcase2
+		je		.nextcase2
 
 		call	get_column		;if no indention, second pass done
 		call	back_element
 		cmp	[column],ebp
-		jbe	@@done2
+		jbe		.done2
 
 		push	ebp			;save original column
 		mov	ebp,[column]		;set new column
 
 		cmp	al,type_other		;'other' case?
-		jne	@@notother2
+		jne		.notother2
 		call	get_element		;skip 'other'
-		jmp	@@getcolon2		;get colon and compile instruction block
-@@notother2:
-@@nextrange2:	call	get_range		;get value/range and write into jump table
+		jmp	.getcolon2	;get colon and compile instruction block
+.notother2:
+.nextrange2:	call	get_range		;get value/range and write into jump table
 		sub	ebx,eax			;get range count into ebx
 		inc	ebx
 		push	ebx
 		push	eax			;get table start position into eax
-		mov	eax,@@min_value
+		mov	eax,.@min_value
 		call	read_bstack
 		pop	eax
 		sub	eax,ebx
 		push	eax
-		mov	eax,@@table_ptr
+		mov	eax,.@table_ptr
 		call	read_bstack
 		pop	eax
 		shl	eax,1
 		add	eax,ebx			;table pointer in eax
 		pop	ebx			;entry count in ebx
 
-@@filltable:	cmp	[word obj+eax],dx	;make sure entries are unclaimed with 'other' case
+.filltable:	cmp	word [obj+eax],dx	;make sure entries are unclaimed with 'other' case
 		jne	error_cfiinu
-		mov	[word obj+eax],cx	;fill table entries with case number
+		mov	word [obj+eax],cx	;fill table entries with case number
 		add	eax,2
 		dec	ebx
-		jnz	@@filltable
+		jnz		.filltable
 
 		call	check_comma		;if comma, compound case
-		je	@@nextrange2
+		je		.nextrange2
 
-@@getcolon2:	call	get_colon		;get ':' after value/range
+.getcolon2:	call	get_colon		;get ':' after value/range
 
 		mov	eax,ecx			;write block address for this case
-		add	eax,@@table_address
+		add	eax,.@table_address
 		call	write_bstack_ptr
 
 		call	compile_block		;compile instruction block
@@ -9826,10 +9856,10 @@ cb_case_fast:	mov	ebp,[column]		;set new column
 		inc	ecx			;inc case count
 
 		mov	eax,ecx			;write block address for potential missing 'other' case
-		add	eax,@@table_address	;(points to next/last bc_case_fast_done)
+		add	eax,.@table_address	;(points to next/last bc_case_fast_done)
 		call	write_bstack_ptr
 
-		mov	eax,@@table_ptr		;make sure address offset will fit into jump table word
+		mov	eax,.@table_ptr		;make sure address offset will fit into jump table word
 		call	read_bstack
 		mov	eax,[obj_ptr]
 		sub	eax,ebx
@@ -9840,56 +9870,56 @@ cb_case_fast:	mov	ebp,[column]		;set new column
 		call	enter_obj
 
 		pop	ebp			;restore original column
-		jmp	@@nextcase2		;get next case
-@@done2:
-		mov	eax,@@final_addr	;write final address
+		jmp	.nextcase2	;get next case
+.done2:
+		mov	eax,.@final_addr	;write final address
 		call	write_bstack_ptr
 
 
-		mov	eax,@@table_ptr		;replace case numbers with block offsets in jump table
+		mov	eax,.@table_ptr		;replace case numbers with block offsets in jump table
 		call	read_bstack
-		movzx	ecx,[word obj-2+ebx]	;get jump table count in ecx
+		movzx	ecx,word [obj-2+ebx]	;get jump table count in ecx
 		inc	ecx
 		mov	edx,ebx			;get jump table offset in edx
 
-@@replace:	movzx	eax,[word obj+ebx]	;get case index from jump table
+.replace:	movzx	eax,word [obj+ebx]	;get case index from jump table
 		push	ebx
-		add	eax,@@table_address	;use case index to look up case block offset
+		add	eax,.@table_address	;use case index to look up case block offset
 		call	read_bstack
 		mov	eax,ebx
 		sub	eax,edx
 		pop	ebx
-		mov	[word obj+ebx],ax	;write case block offset into jump table
+		mov	word [obj+ebx],ax	;write case block offset into jump table
 		add	ebx,2			;loop until all cases + 'other' handled
-		loop	@@replace
+		loop	 .replace
 
 		ret
 
 
 
-@@updateminmax:	push	eax			;update min and max values with eax
+.updateminmax:	push	eax			;update min and max values with eax
 		push	ebx
 		push	ecx
 
 		mov	ecx,eax
 
-		mov	eax,@@min_value		;update min value
+		mov	eax,.@min_value		;update min value
 		call	read_bstack
 		cmp	ecx,ebx
-		jge	@@notmin
+		jge		.notmin
 		mov	ebx,ecx
 		call	write_bstack
-@@notmin:
-		mov	eax,@@max_value		;update max value
+.notmin:
+		mov	eax,.@max_value		;update max value
 		call	read_bstack
 		cmp	ecx,ebx
-		jle	@@notmax
+		jle		.notmax
 		mov	ebx,ecx
 		call	write_bstack
-@@notmax:
+.notmax:
 		call	read_bstack		;check for span violation
 		mov	ecx,ebx
-		mov	eax,@@min_value
+		mov	eax,.@min_value
 		call	read_bstack
 		sub	ecx,ebx
 		cmp	ecx,255
@@ -9916,15 +9946,15 @@ cb_repeat:	mov	ebp,[column]		;set new column
 		call	get_element		;determine repeat type
 
 		cmp	al,type_end		;plain (may be post-while/until)?
-		je	@@plain
+		je		.plain
 
 		cmp	al,type_while		;pre-while?
 		mov	cl,bc_jz		;(jz)
-		je	@@prewu
+		je		.prewu
 
 		cmp	al,type_until		;pre-until?
 		mov	cl,bc_jnz		;(jnz)
-		je	@@prewu
+		je		.prewu
 
 		call	back_element		;count/var
 		push	[source_ptr]
@@ -9932,15 +9962,15 @@ cb_repeat:	mov	ebp,[column]		;set new column
 		call	get_element
 		pop	[source_ptr]
 		cmp	al,type_end		;count?
-		je	@@count
+		je	.count
 
 
 		mov	al,type_repeat_var	;redo blocknext type to repeat-var
 		call	redo_bnest
-		lea	eax,[@@varcomp]		;optimize repeat-var block
-		jmp	@@optimize
+		lea	eax,[.varcomp]		;optimize repeat-var block
+		jmp		.optimize
 
-@@varcomp:	mov	eax,2			;compile loop address
+.varcomp:	mov	eax,2			;compile loop address
 		call	compile_bstack_address
 		call	get_variable		;get variable (ecx, esi, edi hold variable data)
 		call	get_from		;get 'from'
@@ -9950,11 +9980,11 @@ cb_repeat:	mov	ebp,[column]		;set new column
 		call	compile_exp		;compile 'to' expression
 		call	get_step_or_end		;check for 'step' or end
 		mov	dh,bc_repeat_var_init_1	;if no 'step', ready to compile setup + repeat_var_init_1
-		jne	@@varcompstep1
+		jne		.varcompstep1
 		call	compile_exp		;compile 'step' expression
 		call	get_end
 		mov	dh,bc_repeat_var_init	;ready to compile setup + repeat_var_init
-@@varcompstep1:	pop	eax			;point to 'from' expression
+.varcompstep1:	pop	eax			;point to 'from' expression
 		call	compile_oos_exp		;compile 'from' expression
 		call	compile_var_assign
 		mov	eax,2			;set loop address
@@ -9968,25 +9998,25 @@ cb_repeat:	mov	ebp,[column]		;set new column
 		jmp	write_bstack_ptr
 
 
-@@count:	mov	al,type_repeat_count	;redo blocknest type to repeat-count
+.count:	mov	al,type_repeat_count	;redo blocknest type to repeat-count
 		call	redo_bnest
-		lea	eax,[@@countcomp]	;optimize repeat-count block
-		jmp	@@optimize
+		lea	eax,[.countcomp]	;optimize repeat-count block
+		jmp		.optimize
 
-@@countcomp:	call	compile_exp_check_con	;compile count expression, check for constant
+.countcomp:	call	compile_exp_check_con	;compile count expression, check for constant
 		pushf
 		call	get_end
 		popf
-		jnz	@@countnc		;if not constant, compile tjz at start of block
+		jnz	.countnc	;if not constant, compile tjz at start of block
 		mov	ebx,[con_value]		;get constant
 		cmp	ebx,0			;if 0, skip block (compile nothing)
 		je	skip_block
 		call	compile_constant	;not 0, compile constant and skip tjz
-		jmp	@@countnz
-@@countnc:	mov	bl,bc_tjz		;(tjz)
+		jmp		.countnz
+.countnc:	mov	bl,bc_tjz		;(tjz)
 		mov	eax,1			;compile forward branch ('quit')
 		call	compile_bstack_branch
-@@countnz:	mov	eax,2			;set loop address
+.countnz:	mov	eax,2			;set loop address
 		call	write_bstack_ptr
 		call	compile_block		;compile repeat block
 		mov	eax,0			;set 'next' address
@@ -9998,10 +10028,10 @@ cb_repeat:	mov	ebp,[column]		;set new column
 		jmp	write_bstack_ptr
 
 
-@@prewu:	lea	eax,[@@prewucomp]	;optimize repeat-while/until block
-		jmp	@@optimize
+.prewu:	lea	eax,[.prewucomp]	;optimize repeat-while/until block
+		jmp		.optimize
 
-@@prewucomp:	mov	eax,0			;set 'next' address
+.prewucomp:	mov	eax,0			;set 'next' address
 		call	write_bstack_ptr
 		call	compile_exp		;compile pre-while/until expression
 		call	get_end
@@ -10016,43 +10046,43 @@ cb_repeat:	mov	ebp,[column]		;set new column
 		jmp	write_bstack_ptr
 
 
-@@plain:	mov	cl,0			;assume plain (not post-while/until)
-		lea	eax,[@@plaincomp]	;optimize repeat-plain block
-		jmp	@@optimize
+.plain:	mov	cl,0			;assume plain (not post-while/until)
+		lea	eax,[.plaincomp]	;optimize repeat-plain block
+		jmp		.optimize
 
-@@plaincomp:	mov	eax,2			;set loop address
+.plaincomp:	mov	eax,2			;set loop address
 		call	write_bstack_ptr
 		cmp	cl,1			;post-while/until?
-		je	@@plainwu
+		je		.plainwu
 		mov	eax,0			;set plain 'next' address
 		call	write_bstack_ptr
-@@plainwu:	call	compile_block		;compile repeat block
+.plainwu:	call	compile_block		;compile repeat block
 		call	get_element		;get next element
-		jc	@@plainloop		;if eof, plain
+		jc	.plainloop	;if eof, plain
 		call	get_column		;get column
 		cmp	[column],ebp		;if lower, backup, plain
-		jb	@@plainbackup
+		jb		.plainbackup
 		cmp	al,type_while		;post-while?
 		mov	bl,bc_jnz		;(jnz)
-		je	@@plainpost
+		je		.plainpost
 		cmp	al,type_until		;post-until?
 		mov	bl,bc_jz		;(jz)
-		jne	@@plainbackup
-@@plainpost:	mov	cl,1			;set post-while/until flag
+		jne		.plainbackup
+.plainpost:	mov	cl,1			;set post-while/until flag
 		mov	eax,0			;set post-while/until 'next' address
 		call	write_bstack_ptr
 		call	compile_exp		;compile post-while/until expression
 		call	get_end
-		jmp	@@plainpost2		;compile post-while/until loop
-@@plainbackup:	call	back_element		;lower/unknown, backup
-@@plainloop:	mov	bl,bc_jmp		;compile plain loop (jmp)
-@@plainpost2:	mov	eax,2			;compile backward branch (loop)
+		jmp	.plainpost2	;compile post-while/until loop
+.plainbackup:	call	back_element		;lower/unknown, backup
+.plainloop:	mov	bl,bc_jmp		;compile plain loop (jmp)
+.plainpost2:	mov	eax,2			;compile backward branch (loop)
 		call	compile_bstack_branch
 		mov	eax,1			;set 'quit' address
 		jmp	write_bstack_ptr
 
 
-@@optimize:	call	optimize_block		;optimize repeat block
+.optimize:	call	optimize_block		;optimize repeat block
 		call	end_bnest		;done, end blocknest
 		jmp	cb_loop			;return to compile block loop
 ;
@@ -10072,7 +10102,7 @@ optimize_block:	push	ebx
 
 		xor	esi,esi			;init size to impossible
 
-@@compile:	pop	[obj_ptr]		;restore pointers
+.compile:	pop	[obj_ptr]		;restore pointers
 		pop	[source_ptr]
 		push	[source_ptr]
 		push	[obj_ptr]
@@ -10087,7 +10117,7 @@ optimize_block:	push	ebx
 
 		cmp	esi,[obj_ptr]		;(re)compile until same size twice
 		mov	esi,[obj_ptr]
-		jne	@@compile
+		jne		.compile
 
 		pop	esi			;pop pointers
 		pop	esi
@@ -10123,7 +10153,7 @@ new_bnest:	push	ebx
 
 		mov	eax,07FFFFh		;init bstack values to max forward
 		shl	edi,2
-		add	edi,offset bstack
+		add	edi,bstack
 	rep	stosd
 
 		pop	edi
@@ -10143,9 +10173,10 @@ end_bnest:	dec	[bnest_ptr]		;end blocknest
 		pop	[bstack_ptr]
 		ret
 
-
+		udataseg
 ddx		bnest_ptr			;blocknest data
 dbx		bnest_type,block_nest_limit
+		codeseg
 ;
 ;
 ; Blockstack routines
@@ -10182,19 +10213,19 @@ compile_bstack_address:				;compile address from bstack (eax=index)
 		call	read_bstack		;get address
 
 		cmp	ebx,0FFFFh		;long?
-		jbe	@@notlong
+		jbe		.notlong
 		mov	al,bc_con_rflong
 		call	enter_obj
 		mov	eax,ebx
 		jmp	enter_obj_long
-@@notlong:
+.notlong:
 		cmp	ebx,0FFh		;word?
-		jbe	@@notword
+		jbe		.notword
 		mov	al,bc_con_rfword
 		call	enter_obj
 		mov	ax,bx
 		jmp	enter_obj_word
-@@notword:
+.notword:
 		mov	al,bc_con_rfbyte	;byte
 		call	enter_obj
 		mov	al,bl
@@ -10208,10 +10239,11 @@ compile_bstack_branch:				;compile branch from bstack (eax=index, bl=branch byte
 		pop	eax			;restore bytecode into al
 		jmp	compile_branch		;compile branch
 
-
+		udataseg
 ddx		bstack_ptr			;blockstack data
 ddx		bstack_base,block_nest_limit
 ddx		bstack,block_stack_limit
+		codeseg
 ;
 ;
 ;************************************************************************
@@ -10251,16 +10283,16 @@ compile_inst:
 		je	ci_debug
 
 		cmp	al,type_i_flex		;flex instruction?
-		jne	@@notflex
+		jne		.notflex
 		test	bh,flex_results		;must not return any result
 		jnz	error_ticobu
 		jmp	compile_flex
-@@notflex:
+.notflex:
 		cmp	al,type_asm_dir		;inline assembly?
-		jne	@@notinline
+		jne		.notinline
 		cmp	bl,dir_org
 		je	compile_inline
-@@notinline:
+.notinline:
 		cmp	al,type_inc		;++var ?
 		mov	dh,bc_var_inc		;(assign pre-inc)
 		je	compile_var_pre
@@ -10281,10 +10313,10 @@ compile_inst:
 		mov	edx,[source_start]	;save source start for compile_var_multi and ct_method_ptr
 
 		cmp	al,type_under		;_,... := param(s),... ?
-		jne	@@notunder
+		jne		.notunder
 		call	get_comma
 		jmp	compile_var_multi
-@@notunder:
+.notunder:
 		call	check_variable		;variable ?
 		jne	error_eaiov		;if not, error
 
@@ -10294,11 +10326,11 @@ compile_inst:
 		je	compile_var_multi
 
 		cmp	al,type_left		;var({param,...}){:results} ?
-		jne	@@notvarleft
+		jne		.notvarleft
 		mov	ch,0			;(no result required)
 		mov	cl,bc_drop		;(drop anchor)
 		jmp	ct_method_ptr
-@@notvarleft:
+.notvarleft:
 		cmp	al,type_inc		;var++ ?
 		mov	dh,bc_var_inc
 		je	compile_var_assign
@@ -10325,21 +10357,21 @@ compile_inst:
 
 		cmp	al,type_assign		;var := ?
 		mov	dl,1
-		je	@@assign
+		je		.assign
 
 		call	check_binary		;var binary op assign (w/push)?
-		jne	@@notbin
+		jne		.notbin
 		call	check_equal		;check for '=' after binary op
-		jne	@@notbin
+		jne		.notbin
 		call	check_assign		;verify that assignment is allowed
 		jne	error_tocbufa
 		shr	ebx,16
 		sub	bl,bc_lognot-bc_lognot_write
 		mov	dh,bl
 		mov	dl,2
-@@assign:	call	compile_exp
+.assign:	call	compile_exp
 		jmp	compile_var
-@@notbin:
+.notbin:
 		call	back_element		;no post-var modifier, back up
 
 		call	back_element		;error, back up to variable
@@ -10353,71 +10385,71 @@ compile_inst:
 ci_next_quit:	mov	ecx,[bnest_ptr]		;get blocknest ptr
 		mov	edx,0			;reset pop count
 
-@@find:		cmp	ecx,0			;find repeat block
+.find:		cmp	ecx,0			;find repeat block
 		je	error_tioawarb
 
 		mov	al,[bnest_type-1+ecx]	;get blocknest type
 		mov	ah,bc_jmp		;get default branch for 'quit'
 
 		cmp	al,type_repeat		;'repeat' blocknest?
-		je	@@got
+		je		.got
 
 		cmp	al,type_repeat_var	;'repeat-var' blocknest?
-		jne	@@notrepvar
+		jne		.notrepvar
 		cmp	bl,0			;'next' needs no pops
-		je	@@got
+		je		.got
 		add	edx,4*4			;'quit' needs 4 long pops
-		jmp	@@got
-@@notrepvar:
+		jmp		.got
+.notrepvar:
 		cmp	al,type_repeat_count	;'repeat-count' blocknest?
-		jne	@@notrepcount
+		jne		.notrepcount
 		mov	ah,bc_jnz		;'quit' uses bc_jnz since non-0 value is on stack (no need to pop)
-		jmp	@@got
-@@notrepcount:
+		jmp		.got
+.notrepcount:
 		cmp	al,type_case		;allow nesting within 'case' block(s)
-		jne	@@notcase
+		jne		.notcase
 		add	edx,2*4			;add 2 long pops for each nested 'case'
-		jmp	@@ignore
-@@notcase:
+		jmp		.ignore
+.notcase:
 		cmp	al,type_case_fast	;allow nesting within 'case_fast' block(s)
-		jne	@@notcasefast
+		jne		.notcasefast
 		add	edx,1*4			;add 1 long pop for each nested 'case_fast'
-		jmp	@@ignore
-@@notcasefast:
+		jmp		.ignore
+.notcasefast:
 		cmp	al,type_if		;ignore 'if' blocknest(s)
-		je	@@ignore
+		je		.ignore
 
 		jmp	error_internal		;(should never happen)
 
-@@ignore:	dec	ecx			;check next lower blocknest until repeat block found
-		jmp	@@find
+.ignore:	dec	ecx			;check next lower blocknest until repeat block found
+		jmp		.find
 
 
-@@got:		cmp	edx,0			;compile any pops
-		je	@@nopops
+.got:		cmp	edx,0			;compile any pops
+		je		.nopops
 		cmp	edx,1*4			;single pop?
-		jne	@@multipops
+		jne		.multipops
 		mov	al,bc_pop
 		call	enter_obj
-		jmp	@@nopops
-@@multipops:	mov	al,bc_pop_rfvar		;multiple pops
+		jmp		.nopops
+.multipops:	mov	al,bc_pop_rfvar		;multiple pops
 		call	enter_obj
 		sub	edx,4			;account for final manual long pop in interpreter
 		push	eax
 		mov	eax,edx			;enter adjusted pop count
 		call	compile_rfvar
 		pop	eax
-@@nopops:
+.nopops:
 		mov	ecx,[bstack_base-4+ecx*4]
 
 		cmp	bl,1			;compile 'next'/'quit' branch
-		je	@@quit
+		je		.quit
 
 		mov	al,bc_jmp		;'next' (jmp)
 		mov	ebx,[bstack+0+ecx*4]
 		jmp	compile_branch
 
-@@quit:		mov	al,ah			;'quit' (jmp/jnz)
+.quit:		mov	al,ah			;'quit' (jmp/jnz)
 		mov	ebx,[bstack+4+ecx*4]
 		jmp	compile_branch
 ;
@@ -10428,19 +10460,19 @@ ci_return:	call	get_element		;preview next element
 		call	back_element
 		cmp	al,type_end		;if end, no arg(s)
 		mov	al,bc_return_results
-		je	@@enter
+		je		.enter
 
 		mov	ecx,[sub_results]	;get number of results
-		jecxz	@@error			;if no results, error
+		jecxz	.error		;if no results, error
 
 		call	compile_parameters_np	;compile parameters without parentheses
 
 		mov	al,bc_return_args
 
-@@enter:	jmp	enter_obj
+.enter:	jmp	enter_obj
 
 
-@@error:	jmp	error_eeol		;error, something after 'return', but method has no result(s)
+.error:	jmp	error_eeol		;error, something after 'return', but method has no result(s)
 ;
 ;
 ; Compile instruction - 'abort'
@@ -10449,12 +10481,12 @@ ci_abort:	call	get_element		;preview next element
 		call	back_element
 		cmp	al,type_end		;if end, no arg
 		mov	al,bc_abort_0
-		je	@@enter
+		je		.enter
 
 		call	compile_exp		;arg, compile expression
 		mov	al,bc_abort_arg
 
-@@enter:	jmp	enter_obj
+.enter:	jmp	enter_obj
 ;
 ;
 ; Compile instruction - SEND()
@@ -10463,46 +10495,46 @@ ci_send:	call	get_left		;get '('
 		call	check_right		;make sure '(' not followed by ')'
 		je	error_esendd
 
-@@trynext:	mov	ecx,-1			;check for string of bytes
+.trynext:	mov	ecx,-1			;check for string of bytes
 		mov	edx,[source_ptr]	;remember source pointer
 
-@@trybytes:	inc	ecx			;constant byte?
+.trybytes:	inc	ecx			;constant byte?
 		call	get_element
 		cmp	al,type_con
-		jne	@@notbyte
+		jne		.notbyte
 		cmp	ebx,0FFh
-		ja	@@notbyte
+		ja		.notbyte
 		call	check_comma
-		je	@@trybytes
+		je		.trybytes
 		call	check_right
-		jne	@@notbyte
+		jne		.notbyte
 		inc	ecx
 
-@@notbyte:	cmp	ecx,2			;if two or more bytes, compile for bc_call_send_bytes
-		jb	@@tryother
+.notbyte:	cmp	ecx,2			;if two or more bytes, compile for bc_call_send_bytes
+		jb		.tryother
 		mov	al,bc_call_send_bytes
 		call	enter_obj
 		mov	eax,ecx
 		call	compile_rfvar
 		mov	[source_ptr],edx
-@@enterbytes:	call	get_element
+.enterbytes:	call	get_element
 		mov	al,bl
 		call	enter_obj
 		cmp	ecx,1
-		je	@@nocomma
+		je		.nocomma
 		call	get_comma
-@@nocomma:	loop	@@enterbytes
-		jmp	@@checkmore
+.nocomma:	loop	 .enterbytes
+		jmp		.checkmore
 
-@@tryother:	mov	[source_ptr],edx	;compile SEND parameter
+.tryother:	mov	[source_ptr],edx	;compile SEND parameter
 		call	compile_parameter_send
 		cmp	eax,0			;if SEND parameter returned no value, check for more parameters
-		je	@@checkmore
+		je		.checkmore
 		mov	al,bc_call_send		;value on stack, compile bc_call_send
 		call	enter_obj
 
-@@checkmore:	call	get_comma_or_right
-		je	@@trynext
+.checkmore:	call	get_comma_or_right
+		je		.trynext
 
 		ret
 ;
@@ -10512,19 +10544,19 @@ ci_send:	call	get_left		;get '('
 compile_inline:	mov	ecx,000h		;ready default cog origin
 		mov	edx,inline_limit	;ready default cog origin limit
 		call	check_end		;if end, use defaults
-		je	@@org
+		je		.org
 		call	get_value_int		;get cog origin value
 		cmp	ebx,inline_limit
 		jae	error_iolmbbx
 		mov	ecx,ebx
 		call	check_comma		;check for comma
-		jne	@@orgend
+		jne		.orgend
 		call	get_value_int		;get cog origin limit value
 		cmp	ebx,inline_limit
 		jae	error_iolmbbx
 		mov	edx,ebx
-@@orgend:	call	get_end			;get_end
-@@org:
+.orgend:	call	get_end			;get_end
+.org:
 		mov	al,bc_hub_bytecode	;enter 'inline pasm' bytecodes
 		call	enter_obj
 		mov	al,bc_inline
@@ -10547,14 +10579,14 @@ compile_inline:	mov	ecx,000h		;ready default cog origin
 
 		pop	ebx			;get original obj_ptr
 
-@@pad:		mov	eax,ebx			;make inline section a whole number of longs
+.pad:		mov	eax,ebx			;make inline section a whole number of longs
 		xor	eax,[obj_ptr]
 		and	al,11b
-		jz	@@long
+		jz		.long
 		mov	al,0
 		call	enter_obj
-		jmp	@@pad
-@@long:
+		jmp		.pad
+.long:
 		mov	ecx,[obj_ptr]		;compute number of longs
 		sub	ecx,ebx
 		shr	ecx,2
@@ -10562,7 +10594,7 @@ compile_inline:	mov	ecx,000h		;ready default cog origin
 		jz	error_isie		;if inline section is empty, error
 
 		dec	ecx			;store into placeholder
-		mov	[word obj-2+ebx],cx
+		mov	word [obj-2+ebx],cx
 
 		ret
 ;
@@ -10574,13 +10606,13 @@ compile_var_multi:
 		mov	[source_ptr],edx	;repoint to initial variable
 
 		mov	edx,0			;scan '_/var,...' and remember source_ptr's
-@@scan:		push	[source_ptr]
+.scan:		push	[source_ptr]
 		call	check_under		;underscore?
-		je	@@under
+		je		.under
 		call	get_variable		;if not underscore, get variable
-@@under:	inc	edx			;track variable count
+.under:	inc	edx			;track variable count
 		call	check_comma
-		je	@@scan
+		je		.scan
 
 		call	get_assign		;get ":='
 
@@ -10590,18 +10622,18 @@ compile_var_multi:
 		mov	ecx,edx			;get variable count		
 		mov	edx,[source_ptr]	;remember source_ptr
 
-@@write:	pop	[source_ptr]		;compile variable writes
+.write:	pop	[source_ptr]		;compile variable writes
 		push	ecx
 		push	edx
 		call	check_under		;if underscore, just pop value
-		jne	@@var
+		jne		.var
 		mov	al,bc_pop
 		call	enter_obj
-		jmp	@@cont
-@@var:		call	compile_var_write	;else, write value to variable
-@@cont:		pop	edx
+		jmp		.cont
+.var:		call	compile_var_write	;else, write value to variable
+.cont:		pop	edx
 		pop	ecx
-		loop	@@write
+		loop	 .write
 
 		mov	[source_ptr],edx	;restore source_ptr
 		ret
@@ -10705,7 +10737,7 @@ ci_unary:	call	check_assign		;verify that assignment is allowed
 ; 111111__	SBIN_LONG_ARRAY(ptr,len)
 ;
 ;
-count0		dc_end		'lower DEBUG commands
+count0		dc_end		;lower DEBUG commands
 count		dc_asm
 count		dc_if
 count		dc_ifnot
@@ -10721,14 +10753,14 @@ count		dc_pc_mouse
 ;
 ci_debug:	mov	[debug_first],1		;set first flag
 		mov	[debug_record_size],0	;reset debug record size
-		mov	[@@tickmode],0		;reset tick mode
-		mov	[@@stack],0		;reset run-time stack depth
+		mov	[.@tickmode],0		;reset tick mode
+		mov	[.@stack],0		;reset run-time stack depth
 
 		cmp	[debug_mode],0		;if debug disabled, scan to end of line
 		je	scan_to_end
 
 		call	check_left		;debug enabled, check for '('
-		je	@@left
+		je		.left
 
 		call	get_end			;no '(', make sure end of line
 		call	back_element
@@ -10739,206 +10771,206 @@ ci_debug:	mov	[debug_first],1		;set first flag
 		mov	al,0			;enter BRK code for debugger
 		jmp	enter_obj
 
-@@left:		call	check_right		;'(', if ')' then empty
-		je	@@enterdebug
+.left:		call	check_right		;'(', if ')' then empty
+		je		.enterdebug
 
 		mov	eax,[source_ptr]	;check for '`'
 		add	eax,[source]
-		cmp	[byte eax],'`'
-		jne	@@nottick		;if no '`', not tick mode
+		cmp	byte [eax],'`'
+		jne	.nottick	;if no '`', not tick mode
 
-		inc	[@@tickmode]		;set tick mode
+		inc	[.@tickmode]		;set tick mode
 
-@@tickstr:	mov	eax,[source_ptr]	;enter string
+.tickstr:	mov	eax,[source_ptr]	;enter string
 		call	debug_tick_string
-		jne	@@enterdebug		;if ')' and end of line, enter debug data
+		jne	.enterdebug	;if ')' and end of line, enter debug data
 
-@@tickcommand:	call	get_element		;got '`', check for debug command
+.tickcommand:	call	get_element		;got '`', check for debug command
 		cmp	al,type_debug_cmd
-		je	@@tickcmd
+		je		.tickcmd
 		cmp	al,type_if
-		je	@@isif
+		je		.isif
 		cmp	al,type_ifnot
-		je	@@isifnot
+		je		.isifnot
 		cmp	al,type_left
-		je	@@tickdec
+		je		.tickdec
 		cmp	al,type_dollar
-		je	@@tickhex
+		je		.tickhex
 		cmp	al,type_percent
-		je	@@tickbin
+		je		.tickbin
 		cmp	al,type_pound
-		je	@@tickchr
+		je		.tickchr
 		jmp	error_eldppodc
 
-@@tickdec:	dec	[source_ptr]		;'(', back up and do SDEC_
+.tickdec:	dec	[source_ptr]		;'(', back up and do SDEC_
 		mov	bl,01100011b
-		jmp	@@tickcmd
+		jmp		.tickcmd
 
-@@tickhex:	mov	bl,10100011b		;'$', do UHEX_
-		jmp	@@tickcmd
+.tickhex:	mov	bl,10100011b		;'$', do UHEX_
+		jmp		.tickcmd
 
-@@tickbin:	mov	bl,11000011b		;'%', do UBIN_
-		jmp	@@tickcmd
+.tickbin:	mov	bl,11000011b		;'%', do UBIN_
+		jmp		.tickcmd
 
-@@tickchr:	call	get_left		;'#', do chr
-@@tickchrlp:	mov	bl,dc_chr		;non-string value, enter chr command
+.tickchr:	call	get_left		;'#', do chr
+.tickchrlp:	mov	bl,dc_chr		;non-string value, enter chr command
 		call	debug_enter_byte
 		call	compile_exp		;compile value
-		call	@@incstack		;account for expression
+		call	.incstack	;account for expression
 		call	get_comma_or_right
-		je	@@tickchrlp
+		je		.tickchrlp
 
-@@ticknext:	mov	esi,[source_ptr]	;check for '`' or ')'
+.ticknext:	mov	esi,[source_ptr]	;check for '`' or ')'
 		add	esi,[source]
 		mov	al,[esi]
 
 		cmp	al,'`'			;if '`', command follows
-		jne	@@ticknottick
+		jne		.ticknottick
 		inc	[source_ptr]
-		jmp	@@tickcommand
-@@ticknottick:
+		jmp		.tickcommand
+.ticknottick:
 		cmp	al,')'			;')', if not followed by end-of-line, part of string
-		jne	@@tickstr
+		jne		.tickstr
 		push	[source_ptr]
 		call	get_right
 		call	check_end
 		pop	[source_ptr]
-		jne	@@tickstr
+		jne		.tickstr
 		call	back_element		;')' followed by end-of-line, DEBUG done
-		jmp	@@enterdebug
-@@nottick:
+		jmp		.enterdebug
+.nottick:
 		call	get_element		;check for initial IF/IFNOT command to inhibit output
 		mov	bl,dc_if
 		cmp	al,type_if
-		je	@@if
+		je		.if
 		mov	bl,dc_ifnot
 		cmp	al,type_ifnot
-		jne	@@notif
-@@if:		call	@@singleparam		;compile single-parameter command
+		jne		.notif
+.if:		call	.singleparam	;compile single-parameter command
 		mov	bl,dc_cogn		;enter cogn command
 		call	debug_enter_byte
-		jmp	@@checknext		;check for more DEBUG data/commands
-@@notif:
+		jmp	.checknext	;check for more DEBUG data/commands
+.notif:
 		mov	bl,dc_cogn		;no initial IF/IFNOT, enter cogn command
 		call	debug_enter_byte
 		call	back_element		;back up to initial element
 
 
-@@next:		call	get_element		;get next element
+.next:		call	get_element		;get next element
 
 		cmp	al,type_if		;check for IF command
-		jne	@@notif2
-@@isif:		mov	bl,dc_if		;enter IF command
-		call	@@singleparam		;compile single-parameter command
-		jmp	@@checknext		;check for more DEBUG data/commands
-@@notif2:
+		jne		.notif2
+.isif:		mov	bl,dc_if		;enter IF command
+		call	.singleparam	;compile single-parameter command
+		jmp	.checknext	;check for more DEBUG data/commands
+.notif2:
 		cmp	al,type_ifnot		;check for IFNOT command
-		jne	@@notif3
-@@isifnot:	mov	bl,dc_ifnot		;enter IFNOT command
-		call	@@singleparam		;compile single-parameter command
-		jmp	@@checknext		;check for more DEBUG data/commands
-@@notif3:
+		jne		.notif3
+.isifnot:	mov	bl,dc_ifnot		;enter IFNOT command
+		call	.singleparam	;compile single-parameter command
+		jmp	.checknext	;check for more DEBUG data/commands
+.notif3:
 		cmp	al,type_debug_cmd	;check for debug command
-		jne	@@notcmd
+		jne		.notcmd
 
-@@tickcmd:	cmp	bl,dc_dly		;DLY command?
-		je	@@dkm
+.tickcmd:	cmp	bl,dc_dly		;DLY command?
+		je		.dkm
 		cmp	bl,dc_pc_key		;PC_KEY command?
-		je	@@dkm
+		je		.dkm
 		cmp	bl,dc_pc_mouse		;PC_MOUSE command?
-		jne	@@notdkm
-@@dkm:		call	@@singleparam		;compile single-parameter command
+		jne		.notdkm
+.dkm:		call	.singleparam	;compile single-parameter command
 		call	get_right		;get ')' to ensure last command
-		jmp	@@enterdebug		;enter DEBUG code and record
-@@notdkm:
+		jmp	.enterdebug	;enter DEBUG code and record
+.notdkm:
 		test	bl,10h			;dual-parameter command?
-		jnz	@@dualparam
+		jnz		.dualparam
 
 		test	bl,02h			;single-parameter command, show source?
-		jnz	@@spsimple
+		jnz		.spsimple
 
 
 		call	get_left		;verbose, get '('
 
-@@spverbose:	lea	eax,[@@skipparam]	;get expression source string pointers
+.spverbose:	lea	eax,[.skipparam]	;get expression source string pointers
 		call	debug_exp_source
 		call	compile_parameter	;compile a parameter, may have multiple return values
 		mov	ecx,eax			;get number of return values
 		call	debug_enter_byte_flag	;enter first single-parameter command
-		call	@@incstack		;account for first parameter
+		call	.incstack	;account for first parameter
 		call	debug_verbose_string	;enter expression source string
 		dec	ecx			;if more data, do comma+space+data
-		jz	@@spvnext
+		jz		.spvnext
 		or	bl,02h			;switch to comma+space+data mode
-@@spvmulti:	call	debug_enter_byte_flag	;enter single-parameter command
-		call	@@incstack		;account for nth parameter
-		loop	@@spvmulti		;loop for additional parameters
-@@spvnext:	and	bl,0FCh			;restore original command
+.spvmulti:	call	debug_enter_byte_flag	;enter single-parameter command
+		call	.incstack	;account for nth parameter
+		loop	.spvmulti	;loop for additional parameters
+.spvnext:	and	bl,0FCh			;restore original command
 		call	get_comma_or_right	;check for more parameters in command
-		je	@@spverbose
-		jmp	@@checknext		;check for more DEBUG data/commands
+		je		.spverbose
+		jmp	.checknext	;check for more DEBUG data/commands
 
 
-@@spsimple:	call	compile_parameters_mptr	;compile parameters, returns parameter count in ecx
+.spsimple:	call	compile_parameters_mptr	;compile parameters, returns parameter count in ecx
 		or	ecx,ecx			;make sure not zero parameters
 		jz	error_eaet
-@@spsmulti:	call	debug_enter_byte_flag	;enter command for each parameter
-		call	@@incstack		;account for one parameter
-		loop	@@spsmulti
-		jmp	@@checknext		;check for more DEBUG data/commands
+.spsmulti:	call	debug_enter_byte_flag	;enter command for each parameter
+		call	.incstack	;account for one parameter
+		loop	 .spsmulti
+		jmp	.checknext	;check for more DEBUG data/commands
 
 
-@@dualparam:	test	bl,02h			;dual-parameter command, verbose?
-		jnz	@@dpsimple
+.dualparam:	test	bl,02h			;dual-parameter command, verbose?
+		jnz		.dpsimple
 
 
 		call	get_left		;verbose, get '('
 
-@@dpverbose:	lea	eax,[@@skipparam]	;get expression source string pointers
+.dpverbose:	lea	eax,[.skipparam]	;get expression source string pointers
 		call	debug_exp_source
 		mov	ecx,2			;compile two parameters
 		call	compile_parameters_np
 		call	debug_enter_byte_flag	;enter dual-parameter command
-		call	@@incstack		;account for two parameters
-		call	@@incstack
+		call	.incstack	;account for two parameters
+		call		.incstack
 		call	debug_verbose_string	;enter expression source string
 		call	get_comma_or_right	;check for more parameters in command
-		je	@@dpverbose
-		jmp	@@checknext		;check for more DEBUG data/commands
+		je		.dpverbose
+		jmp	.checknext	;check for more DEBUG data/commands
 
 
-@@dpsimple:	call	compile_parameters_mptr	;compile parameters, returns parameter count in ecx
+.dpsimple:	call	compile_parameters_mptr	;compile parameters, returns parameter count in ecx
 		or	ecx,ecx			;make sure not zero parameters
 		jz	error_eaet
 		shr	ecx,1			;make sure an even number of parameters
 		jc	error_eaenop
-@@dpsmulti:	call	debug_enter_byte_flag	;enter command for each parameter pair
-		call	@@incstack		;account for two parameters
-		call	@@incstack
-		loop	@@dpsmulti
-		jmp	@@checknext		;check for more DEBUG data/commands
+.dpsmulti:	call	debug_enter_byte_flag	;enter command for each parameter pair
+		call	.incstack	;account for two parameters
+		call		.incstack
+		loop	 .dpsmulti
+		jmp	.checknext	;check for more DEBUG data/commands
 
 
-@@notcmd:	call	back_element		;not debug command, back up
+.notcmd:	call	back_element		;not debug command, back up
 		call	debug_check_string	;if byte(s) then make string
-		jc	@@checknext		;if string, check for more DEBUG data/commands
+		jc	.checknext	;if string, check for more DEBUG data/commands
 
 		mov	bl,dc_chr		;non-string value, enter chr command
 		call	debug_enter_byte
 		call	compile_exp		;compile value
-		call	@@incstack		;account for expression
-		mov	[debug_first],1		;set first flag (followed by @@checknext)
+		call	.incstack	;account for expression
+		mov	[debug_first],1		;set first flag (followed by .@checknext)
 
-@@checknext:	cmp	[@@tickmode],0		;tick mode?
-		jne	@@ticknext
+.checknext:	cmp	[.@tickmode],0		;tick mode?
+		jne		.ticknext
 		call	get_comma_or_right	;more DEBUG data/commands?
-		je	@@next
+		je		.next
 
 
-@@enterdebug:	mov	al,bc_debug		;end of DEBUG data/commands, enter DEBUG bytecode
+.enterdebug:	mov	al,bc_debug		;end of DEBUG data/commands, enter DEBUG bytecode
 		call	enter_obj
 
-		mov	al,[@@stack]		;enter rfvar value for stack popping
+		mov	al,[.@stack]		;enter rfvar value for stack popping
 		call	enter_obj
 
 		call	debug_enter_record	;enter record into debug data, get brk code in al
@@ -10946,208 +10978,209 @@ ci_debug:	mov	[debug_first],1		;set first flag
 		jmp	enter_obj		;enter BRK code
 
 
-@@singleparam:	call	debug_enter_byte	;compile single-parameter command, enter command
+.singleparam:	call	debug_enter_byte	;compile single-parameter command, enter command
 		mov	ecx,1			;compile parameter
 		call	compile_parameters
-		jmp	@@incstack		;account for parameter
+		jmp	.incstack	;account for parameter
 
 
-@@skipparam:	push	[obj_ptr]		;skip parameter which may return multiple values
+.skipparam:	push	[obj_ptr]		;skip parameter which may return multiple values
 		call	compile_parameter
 		pop	[obj_ptr]
 		ret
 
-@@incstack:	add	[@@stack],4		;inc stack counter
+.incstack:	add	[.@stack],4		;inc stack counter
 		js	error_dditl		;used via rfvar, so don't let msb get set
 		ret
 
-
-dbx		@@tickmode
-dbx		@@stack
+		udataseg
+dbx		.@tickmode
+dbx		.@stack
+		codeseg
 ;
 ;
 ; Compile DEBUG for assembler
 ;
 ci_debug_asm:	mov	[debug_first],1		;set first flag
 		mov	[debug_record_size],0	;reset debug record size
-		mov	[@@tickmode],0		;reset tick mode
+		mov	[.@tickmode],0		;reset tick mode
 
 		call	check_right		;empty?
-		je	@@enterdebug
+		je		.enterdebug
 
 		mov	bl,dc_asm		;enter asm-mode command
 		call	debug_enter_byte
 
 		mov	eax,[source_ptr]	;check for '`'
 		add	eax,[source]
-		cmp	[byte eax],'`'
-		jne	@@nottick		;if no '`', not tick mode
+		cmp	byte [eax],'`'
+		jne	.nottick	;if no '`', not tick mode
 
-		inc	[@@tickmode]		;set tick mode
+		inc	[.@tickmode]		;set tick mode
 
-@@tickstr:	mov	eax,[source_ptr]	;enter string
+.tickstr:	mov	eax,[source_ptr]	;enter string
 		call	debug_tick_string
-		jne	@@enterdebug		;if ')' and end of line, enter debug data
+		jne	.enterdebug	;if ')' and end of line, enter debug data
 
-@@tickcommand:	call	get_element		;got '`', check for debug command
+.tickcommand:	call	get_element		;got '`', check for debug command
 		cmp	al,type_debug_cmd
-		je	@@tickcmd
+		je		.tickcmd
 		cmp	al,type_if
-		je	@@isif
+		je		.isif
 		cmp	al,type_ifnot
-		je	@@isifnot
+		je		.isifnot
 		cmp	al,type_left
-		je	@@tickdec
+		je		.tickdec
 		cmp	al,type_dollar
-		je	@@tickhex
+		je		.tickhex
 		cmp	al,type_percent
-		je	@@tickbin
+		je		.tickbin
 		cmp	al,type_pound
-		je	@@tickchr
+		je		.tickchr
 		jmp	error_eldppodc
 
-@@tickdec:	dec	[source_ptr]		;'(', back up and do SDEC_
+.tickdec:	dec	[source_ptr]		;'(', back up and do SDEC_
 		mov	bl,01100011b
-		jmp	@@tickcmd
+		jmp		.tickcmd
 
-@@tickhex:	mov	bl,10100011b		;'$', do UHEX_
-		jmp	@@tickcmd
+.tickhex:	mov	bl,10100011b		;'$', do UHEX_
+		jmp		.tickcmd
 
-@@tickbin:	mov	bl,11000011b		;'%', do UBIN_
-		jmp	@@tickcmd
+.tickbin:	mov	bl,11000011b		;'%', do UBIN_
+		jmp		.tickcmd
 
-@@tickchr:	call	get_left		;'#', do chr
-@@tickchrlp:	mov	bl,dc_chr		;non-string value, enter chr command
+.tickchr:	call	get_left		;'#', do chr
+.tickchrlp:	mov	bl,dc_chr		;non-string value, enter chr command
 		call	debug_enter_byte
-		call	@@compileparam		;compile value
+		call	.compileparam	;compile value
 		call	get_comma_or_right
-		je	@@tickchrlp
+		je		.tickchrlp
 
-@@ticknext:	mov	esi,[source_ptr]	;check for '`' or ')'
+.ticknext:	mov	esi,[source_ptr]	;check for '`' or ')'
 		add	esi,[source]
 		mov	al,[esi]
 
 		cmp	al,'`'			;if '`', command follows
-		jne	@@ticknottick
+		jne		.ticknottick
 		inc	[source_ptr]
-		jmp	@@tickcommand
-@@ticknottick:
+		jmp		.tickcommand
+.ticknottick:
 		cmp	al,')'			;')', if not followed by end-of-line, part of string
-		jne	@@tickstr
+		jne		.tickstr
 		push	[source_ptr]
 		call	get_right
 		call	check_end
 		pop	[source_ptr]
-		jne	@@tickstr
+		jne		.tickstr
 		call	back_element		;')' followed by end-of-line, DEBUG done
-		jmp	@@enterdebug
-@@nottick:
+		jmp		.enterdebug
+.nottick:
 		call	get_element		;check for initial IF/IFNOT command to inhibit output
 		mov	bl,dc_if
 		cmp	al,type_if
-		je	@@if
+		je		.if
 		mov	bl,dc_ifnot
 		cmp	al,type_ifnot
-		jne	@@notif
-@@if:		call	@@singleparam		;compile single-parameter command
+		jne		.notif
+.if:		call	.singleparam	;compile single-parameter command
 		mov	bl,dc_cogn		;enter cogn command
 		call	debug_enter_byte
-		jmp	@@checknext		;check for more DEBUG data/commands
-@@notif:
+		jmp	.checknext	;check for more DEBUG data/commands
+.notif:
 		mov	bl,dc_cogn		;no initial IF/IFNOT, enter cogn command
 		call	debug_enter_byte
 		call	back_element		;back up to initial element
 
 
-@@next:		call	get_element		;get next element
+.next:		call	get_element		;get next element
 
 		cmp	al,type_if		;check for IF command
-		jne	@@notif2
-@@isif:		mov	bl,dc_if		;enter IF command
-		call	@@singleparam		;compile single-parameter command
-		jmp	@@checknext		;check for more DEBUG data/commands
-@@notif2:
+		jne		.notif2
+.isif:		mov	bl,dc_if		;enter IF command
+		call	.singleparam	;compile single-parameter command
+		jmp	.checknext	;check for more DEBUG data/commands
+.notif2:
 		cmp	al,type_ifnot		;check for IFNOT command
-		jne	@@notif3
-@@isifnot:	mov	bl,dc_ifnot		;enter IFNOT command
-		call	@@singleparam		;compile single-parameter command
-		jmp	@@checknext		;check for more DEBUG data/commands
-@@notif3:
+		jne		.notif3
+.isifnot:	mov	bl,dc_ifnot		;enter IFNOT command
+		call	.singleparam	;compile single-parameter command
+		jmp	.checknext	;check for more DEBUG data/commands
+.notif3:
 		cmp	al,type_debug_cmd	;check for debug command
-		jne	@@notcmd
+		jne		.notcmd
 
-@@tickcmd:	cmp	bl,dc_dly		;DLY command?
-		je	@@dkm
+.tickcmd:	cmp	bl,dc_dly		;DLY command?
+		je		.dkm
 		cmp	bl,dc_pc_key		;PC_KEY command?
-		je	@@dkm
+		je		.dkm
 		cmp	bl,dc_pc_mouse		;PC_MOUSE command?
-		jne	@@notdkm
-@@dkm:		call	@@singleparam		;compile single-parameter command
+		jne		.notdkm
+.dkm:		call	.singleparam	;compile single-parameter command
 		call	get_right		;get ')' to ensure last command
-		jmp	@@enterdebug		;enter DEBUG code and record
-@@notdkm:
+		jmp	.enterdebug	;enter DEBUG code and record
+.notdkm:
 		call	get_left		;ZSTR..SBIN_LONG_ARRAY, get '('
 
-@@param:	call	debug_enter_byte_flag	;enter command with flag
+.param:	call	debug_enter_byte_flag	;enter command with flag
 
 		test	bl,02h			;verbose command?
-		jnz	@@notverbose
-		lea	eax,[@@getparam]	;verbose, compile parameter source string
+		jnz		.notverbose
+		lea	eax,[.getparam]	;verbose, compile parameter source string
 		call	debug_exp_source
 		call	debug_verbose_string
-@@notverbose:
+.notverbose:
 		test	bl,10h			;compile one or two parameters
-		jz	@@oneparam
-		call	@@compileparam
+		jz		.oneparam
+		call		.compileparam
 		call	get_comma
-@@oneparam:	call	@@compileparam
+.oneparam:	call		.compileparam
 
 		call	get_comma_or_right	;check for more parameters in command
-		je	@@param
+		je		.param
 
-		jmp	@@checknext		;check for more DEBUG data/commands
+		jmp	.checknext	;check for more DEBUG data/commands
 
 
-@@notcmd:	call	back_element		;not debug command, back up
+.notcmd:	call	back_element		;not debug command, back up
 		call	debug_check_string	;if byte(s) then make string
-		jc	@@checknext		;if string, check for more DEBUG data/commands
+		jc	.checknext	;if string, check for more DEBUG data/commands
 
 		mov	bl,dc_chr		;non-string value, enter chr command
 		call	debug_enter_byte
-		call	@@compileparam		;compile value
-		mov	[debug_first],1		;set first flag (followed by @@checknext)
+		call	.compileparam	;compile value
+		mov	[debug_first],1		;set first flag (followed by .@checknext)
 
-@@checknext:	cmp	[@@tickmode],0		;tick mode?
-		jne	@@ticknext
+.checknext:	cmp	[.@tickmode],0		;tick mode?
+		jne		.ticknext
 		call	get_comma_or_right	;more DEBUG data/commands?
-		je	@@next
+		je		.next
 
 
-@@enterdebug:	jmp	debug_enter_record	;enter debug record, return BRK code in al
+.enterdebug:	jmp	debug_enter_record	;enter debug record, return BRK code in al
 
 
 
-@@singleparam:	call	debug_enter_byte	;compile single-parameter command, enter command
+.singleparam:	call	debug_enter_byte	;compile single-parameter command, enter command
 		call	get_left		;get '('
-		call	@@compileparam		;compile parameter
+		call	.compileparam	;compile parameter
 		jmp	get_right		;get ')'
 
 
-@@compileparam:	push	ebx
+.compileparam:	push	ebx
 
-		call	@@getparam		;compile register/#immediate parameter
-		jz	@@immparam		;#immediate?
+		call	.getparam	;compile register/#immediate parameter
+		jz	.immparam	;#immediate?
 
 		cmp	ebx,3FFh		;register, 10-bit
 		ja	error_rpcx
 		or	ebx,8000h
-@@wordparam:	ror	ebx,8
+.wordparam:	ror	ebx,8
 		call	debug_enter_byte
 		rol	ebx,8
-		jmp	@@lastbyte
+		jmp		.lastbyte
 
-@@immparam:	test	ebx,0FFFFC000h		;#immediate, 14-bit?
-		jz	@@wordparam
+.immparam:	test	ebx,0FFFFC000h		;#immediate, 14-bit?
+		jz		.wordparam
 
 		push	ebx			;#immediate, 32-bit
 		mov	bl,40h
@@ -11159,21 +11192,22 @@ ci_debug_asm:	mov	[debug_first],1		;set first flag
 		shr	ebx,8
 		call	debug_enter_byte
 		shr	ebx,8
-@@lastbyte:	call	debug_enter_byte
+.lastbyte:	call	debug_enter_byte
 
 		pop	ebx
 		ret
 
 
-@@getparam:	call	check_pound		;get parameter, z=1 if #immediate
+.getparam:	call	check_pound		;get parameter, z=1 if #immediate
 		pushf
 		mov	bl,10b
 		call	try_value_int
 		popf
 		ret
 
-
-dbx		@@tickmode
+		udataseg
+dbx		.@tickmode
+		codeseg
 ;
 ;
 ; Get debug expression source start and finish
@@ -11216,10 +11250,10 @@ debug_verbose_string:
 		mov	esi,[debug_src_start]	;get expression string start
 		add	esi,[source]
 
-@@chr:		lodsb				;enter string chrs
+.chr:		lodsb				;enter string chrs
 		mov	bl,al
 		call	debug_enter_byte
-		loop	@@chr
+		loop	 .chr
 
 		mov	bl,0			;zero-terminate string
 		call	debug_enter_byte
@@ -11250,29 +11284,29 @@ debug_check_string:
 		mov	ecx,0
 		mov	edx,[source_ptr]
 		
-@@trybyte:	call	get_element		;constant chr?
+.trybyte:	call	get_element		;constant chr?
 		cmp	al,type_con
-		jne	@@notchr
+		jne		.notchr
 		or	ebx,ebx
-		je	@@notchr
+		je		.notchr
 		cmp	ebx,0FFh
-		ja	@@notchr
+		ja		.notchr
 		inc	ecx
 		call	check_comma
-		je	@@trybyte
+		je		.trybyte
 
-@@notchr:	mov	[source_ptr],edx	;point to first string byte / restore source_ptr
+.notchr:	mov	[source_ptr],edx	;point to first string byte / restore source_ptr
 
-		jecxz	@@nostring		;if no bytes, exit with c=1
+		jecxz	.nostring	;if no bytes, exit with c=1
 
 		mov	bl,dc_str		;enter debug string command
 		call	debug_enter_byte
 
-		jmp	@@string		;enter string bytes
-@@stringlp:	call	get_comma
-@@string:	call	get_element
+		jmp	.string	;enter string bytes
+.stringlp:	call	get_comma
+.string:	call	get_element
 		call	debug_enter_byte
-		loop	@@stringlp
+		loop	 .stringlp
 
 		mov	bl,0			;zero-terminate string
 		call	debug_enter_byte
@@ -11282,7 +11316,7 @@ debug_check_string:
 		stc				;c=1 signifies string compiled
 		ret
 
-@@nostring:	clc				;c=0 signifies no string
+.nostring:	clc				;c=0 signifies no string
 		ret
 ;
 ;
@@ -11304,34 +11338,34 @@ debug_tick_string:
 		inc	esi			;point to chr after start of string
 		xor	ecx,ecx			;reset counter
 
-@@next:		lodsb				;gather string bytes
+.next:		lodsb				;gather string bytes
 		inc	ecx			;inc counter
 
 		cmp	al,0			;if end of file, error
 		je	error_os
 
 		cmp	al,')'			;if ')' followed by end of line, end of string
-		jne	@@noteol
+		jne		.noteol
 		mov	eax,esi
 		sub	eax,[source]
 		mov	[source_ptr],eax
 		call	get_element
 		cmp	al,type_end
-		jne	@@next
-		jmp	@@eos
-@@noteol:
+		jne		.next
+		jmp		.eos
+.noteol:
 		cmp	al,'`'			;if '`', end of string
-		jne	@@next
+		jne		.next
 
-@@eos:		pop	esi			;end of string, got counter, repoint to start of string
+.eos:		pop	esi			;end of string, got counter, repoint to start of string
 
 		mov	bl,dc_str		;enter debug string command
 		call	debug_enter_byte
 
-@@chr:		lodsb				;enter string bytes
+.chr:		lodsb				;enter string bytes
 		mov	bl,al
 		call	debug_enter_byte
-		loop	@@chr
+		loop	 .chr
 
 		mov	bl,0			;zero-terminate string
 		call	debug_enter_byte
@@ -11378,45 +11412,47 @@ debug_enter_record:
 		call	debug_enter_byte
 
 		mov	ebx,1			;get debug index into ebx (1..255)
-@@getindex:	movzx	eax,[word debug_data+ebx*2]
+.getindex:	movzx	eax,word [debug_data+ebx*2]
 		or	eax,eax			;if index empty, make new entry
-		je	@@newindex
+		je		.newindex
 		lea	esi,[debug_record]	;if index already points to an identical command string, use it
 		lea	edi,[debug_data+eax]	;(this gets around needing to patch objects)
 		movzx	ecx,[debug_record_size]
 	repe	cmpsb
-		je	@@oldindex
+		je		.oldindex
 		inc	bl			;check next index
-		jnz	@@getindex
+		jnz		.getindex
 		jmp	error_dditl
 
-@@newindex:	movzx	edx,[word debug_data]	;make new index, enter destination address of command string
-		mov	[word debug_data+ebx*2],dx
+.newindex:	movzx	edx,word [debug_data]	;make new index, enter destination address of command string
+		mov	word [debug_data+ebx*2],dx
 
 		movzx	eax,[debug_record_size]	;make sure room for command string
 		add	eax,edx
 		cmp	eax,debug_data_limit
 		ja	error_dditl
-		mov	[word debug_data],ax
+		mov	word [debug_data],ax
 
 		lea	esi,[debug_record]	;enter debug record
 		lea	edi,[debug_data+edx]
 		movzx	ecx,[debug_record_size]
 	rep	movsb
 
-@@oldindex:	mov	al,bl			;get BRK code into al
+.oldindex:	mov	al,bl			;get BRK code into al
 
 		ret
 ;
 ;
 ; Data
 ;
+		udataseg
 ddx		debug_src_start
 ddx		debug_src_finish
 
 dbx		debug_first
 dbx		debug_record_size
 dbx		debug_record,100h
+		codeseg
 ;
 ;
 ;************************************************************************
@@ -11448,16 +11484,17 @@ dbx		debug_record,100h
 compile_exp_check_con:
 
 		call	compile_exp		;compile expression, may be constant
-		jnz	@@nope
+		jnz		.nope
 
 		push	[con_ptr]		;constant, restore obj_ptr, z=1
 		pop	[obj_ptr]
-@@nope:
+.nope:
 		ret
 
-
+		udataseg
 ddx		con_ptr
 ddx		con_value
+		codeseg
 ;
 ;
 ; Compile expression with sub-expressions
@@ -11471,19 +11508,19 @@ compile_exp:	push	eax
 		push	edi
 
 		call	try_spin2_con_exp	;first, try to resolve constant expression
-		jc	@@notcon		;if failed, compile non-constant expression
+		jc	.notcon	;if failed, compile non-constant expression
 
 		push	[obj_ptr]		;constant, update con_ptr and con_value
 		pop	[con_ptr]
 		mov	[con_value],ebx
 		call	compile_constant	;compile constant
 		xor	al,al			;z=1
-		jmp	@@exit
-@@notcon:
-		call	@@topexp		;compile non-constant expression
+		jmp		.exit
+.notcon:
+		call	.topexp	;compile non-constant expression
 		or	al,1			;z=0
 
-@@exit:		pop	edi
+.exit:		pop	edi
 		pop	esi
 		pop	edx
 		pop	ecx
@@ -11492,59 +11529,59 @@ compile_exp:	push	eax
 		ret
 
 
-@@topexp:	mov	dl,ternary_precedence+1	;expression, set ternary precedence + 1
+.topexp:	mov	dl,ternary_precedence+1	;expression, set ternary precedence + 1
 
-@@subexp:	push	ebx
+.subexp:	push	ebx
 		push	edx
 
 		dec	dl			;lower precedence, if was 0, compile term
-		js	@@term			;else, compile sub-expression
+		js	.term		;else, compile sub-expression
 
-		call	@@subexp		;compile first sub-expression
-@@next:		call	get_element		;get ternary, binary or <end>
+		call	.subexp	;compile first sub-expression
+.next:		call	get_element		;get ternary, binary or <end>
 		call	check_ternary		;ternary?
-		je	@@ternary
+		je		.ternary
 		call	check_binary		;if not binary, back up
-		jne	@@backup
+		jne		.backup
 
 		cmp	bh,dl			;binary, if not current precedence, back up
-		jne	@@backup
-		call	@@subexp		;compile next sub-expression
-		call	@@enterop		;enter unary operator
-		jmp	@@next			;check for next binary
+		jne		.backup
+		call	.subexp	;compile next sub-expression
+		call	.enterop	;enter unary operator
+		jmp	.next		;check for next binary
 
-@@ternary:	cmp	dl,ternary_precedence	;ternary, if not ternary precedence, back up
-		jne	@@backup
-		call	@@topexp		;got 'exp ?', get 'exp:exp'
+.ternary:	cmp	dl,ternary_precedence	;ternary, if not ternary precedence, back up
+		jne		.backup
+		call	.topexp		;got 'exp ?', get 'exp:exp'
 		call	get_colon
-		call	@@topexp
+		call		.topexp
 		mov	al,bc_ternary		;(ternary)
 		call	enter_obj
-		jmp	@@done
+		jmp		.done
 
-@@term:		call	get_element		;term, get '@@', unary, '(', or term
+.term:		call	get_element		;term, get '@@', unary, '(', or term
 		call	check_plus		;ignore leading '+' or '+.'
-		je	@@term
+		je		.term
 		call	negcon_to_con		;convert -constant to constant
 		call	sub_to_neg		;convert subtract to negate
 		call	fsub_to_fneg		;convert floating-point subtract to floating-point negate
 		cmp	al,type_atat
-		je	@@atat
+		je		.atat
 		call	check_unary
-		je	@@unary
+		je		.unary
 		cmp	al,type_left
-		je	@@left
+		je		.left
 		call	compile_term
-		jmp	@@done
+		jmp		.done
 
-@@atat:		mov	dl,0			;@@, set highest precedence
-		call	@@subexp		;compile sub-expression
+.atat:		mov	dl,0			;@@, set highest precedence
+		call	.subexp	;compile sub-expression
 		mov	al,bc_add_pbase		;compile add-pbase
 		call	enter_obj
-		jmp	@@done
+		jmp		.done
 
-@@unary:	call	check_equal		;unary, check for var assignment
-		jne	@@unarynormal
+.unary:	call	check_equal		;unary, check for var assignment
+		jne		.unarynormal
 		call	check_assign		;verify that assignment is allowed
 		jne	error_tocbufa
 		shr	ebx,16
@@ -11553,29 +11590,29 @@ compile_exp:	push	eax
 		mov	dl,2
 		call	get_variable
 		call	compile_var
-		jmp	@@done
+		jmp		.done
 
-@@unarynormal:	mov	dl,bh			;unary, set unary's precedence
-		call	@@subexp		;compile sub-expression
-		call	@@enterop		;enter unary operator
-		jmp	@@done
+.unarynormal:	mov	dl,bh			;unary, set unary's precedence
+		call	.subexp	;compile sub-expression
+		call	.enterop	;enter unary operator
+		jmp		.done
 
-@@left:		call	@@topexp		;'(', compile expression
+.left:		call	.topexp	;'(', compile expression
 		call	get_right		;get ')'
-		jmp	@@done
+		jmp		.done
 
-@@backup:	call	back_element		;end of (sub-)expression, back up
+.backup:	call	back_element		;end of (sub-)expression, back up
 
-@@done:		pop	edx
+.done:		pop	edx
 		pop	ebx
 		ret
 
 
-@@enterop:	test	ebx,opc_hubcode		;enter operator, check if hubcode
-		jz	@@enterop2
+.enterop:	test	ebx,opc_hubcode		;enter operator, check if hubcode
+		jz		.enterop2
 		mov	al,bc_hub_bytecode
 		call	enter_obj
-@@enterop2:	mov	eax,ebx			;math bc_??? in ebx[23:16]
+.enterop2:	mov	eax,ebx			;math bc_??? in ebx[23:16]
 		shr	eax,16
 		jmp	enter_obj
 ;
@@ -11592,20 +11629,20 @@ compile_term:	cmp	al,type_con		;constant integer?
 		je	ct_constr
 
 		cmp	al,type_float		;FLOAT?
-		jne	@@notfloat
+		jne		.notfloat
 		mov	ebx,fc_float
 		jmp	compile_flex
-@@notfloat:
+.notfloat:
 		cmp	al,type_round		;ROUND?
-		jne	@@notround
+		jne		.notround
 		mov	ebx,fc_round
 		jmp	compile_flex
-@@notround:
+.notround:
 		cmp	al,type_trunc		;TRUNC?
-		jne	@@nottrunc
+		jne		.nottrunc
 		mov	ebx,fc_trunc
 		jmp	compile_flex
-@@nottrunc:
+.nottrunc:
 		mov	ch,0			;(no result required, since 'abort' provides result)
 		mov	cl,bc_drop_trap_push	;(drop anchor - trap, push)
 		cmp	al,type_back		;\obj{[]}.method({param,...}), \method({param,...}), \var({param,...}){:results} ?
@@ -11626,16 +11663,16 @@ compile_term:	cmp	al,type_con		;constant integer?
 		je	ct_cogspin
 
 		cmp	al,type_i_flex		;flex instruction?
-		jne	@@notflex
+		jne		.notflex
 		cmp	ebx,fc_coginit		;if fc_coginit, change to fc_coginit_push
-		jne	@@notcoginit
+		jne		.notcoginit
 		mov	ebx,fc_coginit_push
-@@notcoginit:	mov	al,bh			;must return one result
+.notcoginit:	mov	al,bh			;must return one result
 		and	al,flex_results
 		cmp	al,1 shl flex_results_shift
 		jne	error_etmrasr
 		jmp	compile_flex
-@@notflex:
+.notflex:
 		cmp	al,type_at		;@"string", @obj{[]}.method, @method, @hubvar ?
 		je	ct_at
 
@@ -11662,11 +11699,11 @@ compile_term:	cmp	al,type_con		;constant integer?
 		call	get_element		;get element after variable
 
 		cmp	al,type_left		;var({param,...}){:results} ?
-		jne	@@notvarleft
+		jne		.notvarleft
 		mov	ch,1			;(single result required)
 		mov	cl,bc_drop_push		;(drop anchor - push)
 		jmp	ct_method_ptr
-@@notvarleft:
+.notvarleft:
 		cmp	al,type_inc		;var++ ?
 		mov	dh,bc_var_postinc_push
 		je	compile_var_assign
@@ -11700,18 +11737,18 @@ compile_term:	cmp	al,type_con		;constant integer?
 		je	compile_var_exp
 
 		call	check_binary		;var binary op assign (w/push)?
-		jne	@@notbin
+		jne		.notbin
 		test	ebx,opc_assign		;verify that assignment is allowed
-		jz	@@notbin
+		jz		.notbin
 		call	check_equal		;check for '=' after binary op
-		jne	@@notbin
+		jne		.notbin
 		shr	ebx,16
 		sub	bl,bc_lognot-bc_lognot_write_push
 		mov	dh,bl
 		mov	dl,2
 		call	compile_exp
 		jmp	compile_var
-@@notbin:
+.notbin:
 		call	back_element		;no post-var modifier, back up
 
 		mov	dl,0			;var, read
@@ -11731,19 +11768,19 @@ ct_constr:	call	get_left		;get '('
 		call	enter_obj
 
 		mov	cl,1			;reset length, account for 0 terminator
-@@chr:		call	get_value		;get string chr
-		jc	@@chrerror		;floating-point not allowed
+.chr:		call	get_value		;get string chr
+		jc	.chrerror	;floating-point not allowed
 		or	ebx,ebx			;0 not allowed
-		jz	@@chrerror
+		jz		.chrerror
 		cmp	ebx,0FFh		;above 0FFh not allowed
-		jbe	@@chrok
-@@chrerror:	jmp	error_scmrf
-@@chrok:	mov	al,bl			;enter string chr
+		jbe		.chrok
+.chrerror:	jmp	error_scmrf
+.chrok:	mov	al,bl			;enter string chr
 		call	enter_obj
 		inc	cl			;check string length
 		jz	error_scexc
 		call	get_comma_or_right	;check for another character
-		je	@@chr
+		je		.chr
 
 		mov	al,0			;done, enter 0 to terminate string
 		call	enter_obj
@@ -11795,7 +11832,7 @@ ct_try:		call	get_element		;get element after '\'
 ct_objpubcon:	mov	edx,[source_start]	;save source start
 
 		call	check_index		;if index, must be object method
-		je	@@method
+		je		.method
 
 		call	get_dot			;no index, get '.'
 
@@ -11803,7 +11840,7 @@ ct_objpubcon:	mov	edx,[source_start]	;save source start
 		call	get_obj_symbol
 		jne	compile_constant	;if not objpub, compile constant
 
-@@method:	mov	[source_ptr],edx	;restore source pointer
+.method:	mov	[source_ptr],edx	;restore source pointer
 		call	get_element		;get element again
 		jmp	ct_objpub		;compile obj{[]}.method({param,...})
 ;
@@ -11822,10 +11859,10 @@ ct_objpub:	mov	al,cl			;(drop anchor)
 		mov	edi,0			;reset index flags
 
 		call	check_index		;check for obj[]
-		jne	@@noindex
+		jne		.noindex
 		push	eax			;push obj index exp ptr
 		or	edi,1			;set obj index flag
-@@noindex:
+.noindex:
 		call	get_dot			;get dot
 
 		mov	eax,edx			;get objpub symbol
@@ -11839,10 +11876,10 @@ ct_objpub:	mov	al,cl			;(drop anchor)
 		call	compile_parameters
 
 		test	edi,1			;obj[]?
-		jz	@@noindex2
+		jz		.noindex2
 		pop	eax
 		call	compile_oos_exp
-@@noindex2:
+.noindex2:
 		mov	al,bc_call_obj_sub	;enter method call bytecode
 		add	eax,edi			;(bc_call_obj_sub/bc_call_obji_sub)
 		call	enter_obj
@@ -11857,16 +11894,16 @@ ct_objpub:	mov	al,cl			;(drop anchor)
 
 
 confirm_result:	cmp	ch,0			;no result okay?
-		je	@@resok
+		je		.resok
 		mov	eax,ebx			;get number of results
 		shr	eax,20
 		and	eax,0Fh
 		cmp	eax,1
 		jb	error_tmrnr		;if no result, error
-		je	@@resok			;if one result, okay
+		je	.resok		;if one result, okay
 		cmp	ch,1			;more than one result allowed?
 		je	error_tmrmr
-@@resok:	ret
+.resok:	ret
 ;
 ;
 ; Compile term - method({param,...})
@@ -11907,9 +11944,9 @@ ct_method_ptr:	push	edx			;remember source ptr for variable
 		call	get_method_ptr		;get method pointer
 
 		cmp	ch,type_register	;if RECV(), no parameters allowed, one return value
-		jne	@@notrecv
+		jne		.notrecv
 		cmp	esi,mrecv_reg
-		jne	@@notrecv
+		jne		.notrecv
 		cmp	dl,bc_drop_push		;only bc_drop_push is allowed
 		jne	error_recvcbu
 		call	get_left
@@ -11918,16 +11955,16 @@ ct_method_ptr:	push	edx			;remember source ptr for variable
 		call	enter_obj
 		pop	eax			;pop unneeded source ptr
 		ret				;exit
-@@notrecv:
+.notrecv:
 		cmp	ch,type_register	;if SEND(param{,...}), parameters allowed, no return value
-		jne	@@notsend
+		jne		.notsend
 		cmp	esi,msend_reg
-		jne	@@notsend
+		jne		.notsend
 		cmp	dl,bc_drop		;only bc_drop is allowed
 		jne	error_sendcbu
 		pop	eax			;pop unneeded source ptr
 		jmp	ci_send			;compile SEND(param{,...})
-@@notsend:
+.notsend:
 		push	[source_start]		;remember source pointers in case error
 		push	[source_finish]
 
@@ -11938,11 +11975,11 @@ ct_method_ptr:	push	edx			;remember source ptr for variable
 
 		call	check_colon		;check for ':'
 		mov	ebx,0
-		jne	@@noresults
+		jne		.noresults
 		call	get_con_int		;get number of results
 		cmp	ebx,results_limit
 		ja	error_loxre
-@@noresults:	shl	ebx,20			;single result required?
+.noresults:	shl	ebx,20			;single result required?
 
 		pop	[source_finish]		;in case error, restore source pointers to show variable name
 		pop	[source_start]
@@ -11950,7 +11987,7 @@ ct_method_ptr:	push	edx			;remember source ptr for variable
 		mov	ch,dh			;check result requirement
 		call	confirm_result
 
-@@varread:	pop	eax			;compile variable read
+.varread:	pop	eax			;compile variable read
 		push	[source_ptr]
 		mov	[source_ptr],eax
 		call	compile_var_read
@@ -11968,13 +12005,13 @@ ct_look:	mov	cl,bl			;save 'lookup'/'lookdown' and 0/1 flags
 		mov	ah,1			;reserve 16 bstack variables
 		call	new_bnest
 
-		lea	eax,[@@comp]		;optimize block
+		lea	eax,[.comp]		;optimize block
 		call	optimize_block
 
 		jmp	end_bnest		;done, end blocknest
 
 
-@@comp:		mov	eax,0			;compile address constant
+.comp:		mov	eax,0			;compile address constant
 		call	compile_bstack_address
 
 		call	get_left		;get '('
@@ -11986,17 +12023,17 @@ ct_look:	mov	cl,bl			;save 'lookup'/'lookdown' and 0/1 flags
 		add	al,bc_con_n+1		;(constant 0/1)
 		call	enter_obj
 
-@@loop:		mov	al,cl			;compile (next) value/range
+.loop:		mov	al,cl			;compile (next) value/range
 		shr	al,1
 		and	al,1
 		call	compile_range
-		jne	@@value
+		jne		.value
 		or	al,2
-@@value:	add	al,bc_lookup_value	;(bc_lookup_value, bc_lookdown_value, bc_lookup_range, bc_lookdown_range)
+.value:	add	al,bc_lookup_value	;(bc_lookup_value, bc_lookdown_value, bc_lookup_range, bc_lookdown_range)
 		call	enter_obj
 
 		call	get_comma_or_right	;get ',' or ')'
-		je	@@loop
+		je		.loop
 
 		mov	al,bc_look_done		;(lookdone)
 		call	enter_obj
@@ -12019,21 +12056,21 @@ ct_cogspin:	push	ecx			;push bc_coginit/bc_coginit_push
 		mov	edx,[source_start]	;remember source start
 
 		cmp	al,type_obj		;obj{[]}.method({param,...}) ?
-		je	@@object
+		je		.object
 		cmp	al,type_method		;method({param,...}) ?
-		je	@@method
+		je		.method
 		call	check_variable		;var({param,...}) ?
-		je	@@method_ptr
+		je		.method_ptr
 		jmp	error_eamomp
 
 
-@@object:	call	check_index		;object method, skip any index
+.object:	call	check_index		;object method, skip any index
 		call	get_dot			;get '.'
 		mov	eax,ebx			;get obj symbol
 		call	get_obj_symbol
 		jne	error_eamn		;if not method, error
 
-@@method:	mov	ecx,ebx			;get parameter count
+.method:	mov	ecx,ebx			;get parameter count
 		shr	ecx,24
 		push	ecx			;push parameter count
 		call	compile_parameters	;compile parameters
@@ -12042,10 +12079,10 @@ ct_cogspin:	push	ecx			;push bc_coginit/bc_coginit_push
 		mov	[source_ptr],edx
 		call	ct_at
 		pop	[source_ptr]
-		jmp	@@finish
+		jmp		.finish
 
 
-@@method_ptr:	mov	[source_ptr],edx	;method pointer, confirm long variable
+.method_ptr:	mov	[source_ptr],edx	;method pointer, confirm long variable
 		call	get_method_ptr
 
 		call	compile_parameters_mptr	;compile parameters, returns parameter count in ecx
@@ -12057,7 +12094,7 @@ ct_cogspin:	push	ecx			;push bc_coginit/bc_coginit_push
 		pop	[source_ptr]
 
 
-@@finish:	call	get_comma		;get ','
+.finish:	call	get_comma		;get ','
 
 		call	compile_exp		;compile stackadr
 
@@ -12081,32 +12118,32 @@ compile_flex:	call	get_left		;get '('
 
 		movzx	ecx,bh			;any parameters?
 		and	ecx,flex_params
-		jz	@@paramsdone
+		jz		.paramsdone
 
 		
 		test	bh,flex_pinfld		;check for pinfield in first parameter?
-		jz	@@params
+		jz		.params
 
 		push	[source_ptr]		;if first parameter returns single value followed by '..', pinfield
 		push	[obj_ptr]
 		call	compile_parameter
 		dec	eax
-		jne	@@oneresult
+		jne		.oneresult
 		call	check_dotdot
-@@oneresult:	pop	[obj_ptr]
+.oneresult:	pop	[obj_ptr]
 		pop	[source_ptr]
-		jne	@@params
+		jne		.params
 
 
 		push	[source_ptr]		;pinfield, push source_ptr and obj_ptr
 		push	[obj_ptr]
 
 		call	compile_exp_check_con	;try to get both values as constants
-		jnz	@@notcons
+		jnz		.notcons
 		mov	edx,[con_value]
 		call	get_dotdot
 		call	compile_exp_check_con
-		jnz	@@notcons
+		jnz		.notcons
 		mov	eax,[con_value]
 
 		push	ebx			;got both as constants, make sure they don't cross ports
@@ -12126,9 +12163,9 @@ compile_flex:	call	get_left		;get '('
 		pop	ebx
 		pop	eax			;pop original source_ptr and obj_ptr from stack
 		pop	eax
-		jmp	@@condone
+		jmp		.condone
 
-@@notcons:	pop	[obj_ptr]		;not constants, compile both values normally
+.notcons:	pop	[obj_ptr]		;not constants, compile both values normally
 		pop	[source_ptr]
 		call	compile_exp
 		call	get_dotdot
@@ -12138,20 +12175,20 @@ compile_flex:	call	get_left		;get '('
 		mov	al,bc_addpins
 		call	enter_obj
 
-@@condone:	dec	ecx			;more parameters to compile?
-		jz	@@paramsdone
+.condone:	dec	ecx			;more parameters to compile?
+		jz		.paramsdone
 		call	get_comma		;more parameters, get ','
 
 
-@@params:	call	compile_parameters_np	;compile parameters without parentheses
+.params:	call	compile_parameters_np	;compile parameters without parentheses
 
-@@paramsdone:	call	get_right		;get ')'
+.paramsdone:	call	get_right		;get ')'
 
 		test	bh,flex_hubcode		;hub bytecode?
-		jz	@@nothub
+		jz		.nothub
 		mov	al,bc_hub_bytecode
 		call	enter_obj
-@@nothub:
+.nothub:
 		mov	al,bl			;enter bytecode
 		jmp	enter_obj
 ;
@@ -12160,17 +12197,17 @@ compile_flex:	call	get_left		;get '('
 ;
 ct_at:		call	get_element		;get string, object, method, or variable
 		cmp	al,type_con
-		je	@@string
+		je		.string
 		cmp	al,type_obj
-		je	@@object
+		je		.object
 		cmp	al,type_method
-		je	@@method
+		je		.method
 		call	check_variable
-		je	@@var
+		je		.var
 		jmp	error_easvmoo
 
 
-@@string:	mov	al,bc_string		;enter string bytecode
+.string:	mov	al,bc_string		;enter string bytecode
 		call	enter_obj
 
 		mov	edx,[obj_ptr]		;remember obj_ptr for patching length byte
@@ -12180,23 +12217,23 @@ ct_at:		call	get_element		;get string, object, method, or variable
 
 		mov	cl,1			;reset length, account for 0 terminator
 		call	back_element		;back up to first character
-@@chr:		call	get_element		;get string chr
+.chr:		call	get_element		;get string chr
 		cmp	al,type_con
-		jne	@@chrerror
+		jne		.chrerror
 		or	ebx,ebx			;0 not allowed
-		jz	@@chrerror
+		jz		.chrerror
 		cmp	ebx,0FFh		;above 0FFh not allowed
-		jbe	@@chrok
-@@chrerror:	jmp	error_scmrf
-@@chrok:	mov	al,bl			;enter string chr
+		jbe		.chrok
+.chrerror:	jmp	error_scmrf
+.chrok:	mov	al,bl			;enter string chr
 		call	enter_obj
 		inc	cl			;check string length
 		jz	error_scexc
 		cmp	[source_flags],0	;check if string done
-		je	@@strdone
+		je		.strdone
 		call	get_comma		;get comma and loop for next character
-		jmp	@@chr
-@@strdone:
+		jmp		.chr
+.strdone:
 		mov	al,0			;done, enter 0 to terminate string
 		call	enter_obj
 
@@ -12204,14 +12241,14 @@ ct_at:		call	get_element		;get string, object, method, or variable
 		ret
 
 
-@@object:	mov	edx,ebx			;@obj{[]}.method, preserve obj data
+.object:	mov	edx,ebx			;@obj{[]}.method, preserve obj data
 		mov	edi,0			;reset index flag
 
 		call	check_index		;check for obj[]
-		jne	@@noindex
+		jne		.noindex
 		push	eax			;push obj index exp ptr
 		or	edi,1			;set obj index flag
-@@noindex:
+.noindex:
 		call	get_dot			;get dot
 
 		mov	eax,edx			;get obj symbol
@@ -12219,10 +12256,10 @@ ct_at:		call	get_element		;get string, object, method, or variable
 		jne	error_eamn		;if not method, error
 
 		test	edi,1			;compile any obj[] index
-		jz	@@noindex2
+		jz		.noindex2
 		pop	eax
 		call	compile_oos_exp
-@@noindex2:
+.noindex2:
 		mov	al,bc_mptr_obj_sub	;enter mptr bytecode
 		add	eax,edi			;(bc_mptr_obj_sub/bc_mptr_obji_sub)
 		call	enter_obj
@@ -12236,7 +12273,7 @@ ct_at:		call	get_element		;get string, object, method, or variable
 		jmp	compile_rfvar
 
 
-@@method:	mov	al,bc_mptr_sub		;@method, enter mptr bytecode
+.method:	mov	al,bc_mptr_sub		;@method, enter mptr bytecode
 		call	enter_obj
 
 		mov	eax,ebx			;compile rfvar index of method
@@ -12244,7 +12281,7 @@ ct_at:		call	get_element		;get string, object, method, or variable
 		jmp	compile_rfvar
 
 
-@@var:		cmp	ch,type_register	;if @register, error
+.var:		cmp	ch,type_register	;if @register, error
 		je	error_arina
 
 		test	ecx,var_bitfield_flag	;if @bitfield, error
@@ -12273,7 +12310,7 @@ ct_upat:	call	get_element		;get variable
 ; c=0 if found, c=1 if eof
 ;
 next_block:	call	get_element		;scan for type_block dl
-		jc	@@eof
+		jc		.eof
 		cmp	al,type_block
 		jne	next_block
 		cmp	bl,dl
@@ -12283,7 +12320,7 @@ next_block:	call	get_element		;scan for type_block dl
 		cmp	[column],1
 		jne	error_bdmbifc		;c=0
 
-@@eof:		ret
+.eof:		ret
 ;
 ;
 ; Get ???
@@ -12435,14 +12472,14 @@ get_comma_or_right:
 		call	get_element		;get comma or right
 
 		cmp	al,type_comma		;comma?
-		je	@@exit			;comma, z=1
+		je	.exit		;comma, z=1
 
 		cmp	al,type_right		;right?
 		jne	error_ecor		;if neither, error
 
 		inc	eax			;right, z=0
 
-@@exit:		pop	ebx
+.exit:		pop	ebx
 		pop	eax
 		ret
 ;
@@ -12458,14 +12495,14 @@ get_comma_or_end:
 		call	get_element		;get comma or end
 
 		cmp	al,type_comma		;comma?
-		je	@@exit			;comma, z=1
+		je	.exit		;comma, z=1
 
 		cmp	al,type_end		;end?
 		jne	error_ecoeol		;if neither, error
 
 		inc	eax			;end, z=0
 
-@@exit:		pop	ebx
+.exit:		pop	ebx
 		pop	eax
 		ret
 ;
@@ -12494,14 +12531,14 @@ get_step_or_end:
 		call	get_element		;get step or end
 
 		cmp	al,type_step		;'step'?
-		je	@@exit			;'step', z=1
+		je	.exit		;'step', z=1
 
 		cmp	al,type_end		;end?
 		jne	error_esoeol		;if neither, error
 
 		inc	eax			;end, z=0
 
-@@exit:		pop	ebx
+.exit:		pop	ebx
 		pop	eax
 		ret
 ;
@@ -12517,16 +12554,16 @@ get_pipe_or_end:
 		call	get_element		;get pipe or end
 
 		cmp	al,type_op		;pipe?
-		jne	@@notpipe
+		jne		.notpipe
 		cmp	bl,op_bitor
-		je	@@exit			;pipe, z=1
-@@notpipe:
+		je	.exit		;pipe, z=1
+.notpipe:
 		cmp	al,type_end		;end?
 		jne	error_epoeol		;if neither, error
 
 		inc	eax			;end, z=0
 
-@@exit:		pop	ebx
+.exit:		pop	ebx
 		pop	eax
 		ret
 ;
@@ -12562,9 +12599,9 @@ check_hubcode:	test	ebx,opc_hubcode
 		jnz	check_tbu
 
 check_tbu_no:	cmp	al,0			;make z=0
-		jnz	@@ret
+		jnz		.ret
 		cmp	al,1
-@@ret:		ret
+.ret:		ret
 
 check_tbu:	cmp	al,type_op
 		ret				;z=1 if type
@@ -12573,14 +12610,14 @@ check_tbu:	cmp	al,type_op
 ; Check for operator
 ;
 check_lognot:	cmp	al,type_op		;check for !!
-		jne	@@ret
+		jne		.ret
 		cmp	bl,op_lognot
-@@ret:		ret
+.ret:		ret
 
 check_bitnot:	cmp	al,type_op		;check for !
-		jne	@@ret
+		jne		.ret
 		cmp	bl,op_bitnot
-@@ret:		ret
+.ret:		ret
 ;
 ;
 ; Scan to right parenthesis
@@ -12591,20 +12628,20 @@ scan_to_right:	push	eax
 
 		mov	ecx,0
 
-@@scan:		call	get_element
+.scan:		call	get_element
 
 		cmp	al,type_end
 		je	error_eright
 
 		cmp	al,type_left
-		jne	@@notleft
+		jne		.notleft
 		inc	ecx
-		jmp	@@scan
-@@notleft:
+		jmp		.scan
+.notleft:
 		cmp	al,type_right
-		jne	@@scan
+		jne		.scan
 		dec	ecx
-		jns	@@scan
+		jns		.scan
 
 		pop	ecx
 		pop	ebx
@@ -12617,9 +12654,9 @@ scan_to_right:	push	eax
 scan_to_end:	push	eax
 		push	ebx
 
-@@scan:		call	get_element		;scan to end of line
+.scan:		call	get_element		;scan to end of line
 		cmp	al,type_end
-		jne	@@scan
+		jne		.scan
 
 		call	back_element		;back up to end of line
 
@@ -12633,7 +12670,7 @@ scan_to_end:	push	eax
 ;
 check_local:	cmp	al,type_dot		;if not dot, exit with c=1
 		stc
-		jne	@@ret
+		jne		.ret
 
 		push	ecx
 
@@ -12658,7 +12695,7 @@ check_local:	cmp	al,type_dot		;if not dot, exit with c=1
 		call	find_symbol		;find local symbol
 		clc				;c=0
 
-@@ret:		ret
+.ret:		ret
 ;
 ;
 ; Get obj pub/con symbol
@@ -12676,21 +12713,21 @@ get_obj_symbol:	push	ecx
 
 		shr	eax,24			;append obj id + 1 and 0
 		inc	eax
-		mov	[word symbol+ecx],ax
+		mov	word [symbol+ecx],ax
 
 		call	find_symbol		;lookup appended symbol
 
 		cmp	al,type_objpub		;if objpub, done, z=1
-		je	@@exit
+		je		.exit
 
 		cmp	al,type_objcon		;make sure objcon/objcon_float
-		je	@@con
+		je		.con
 		cmp	al,type_objcon_float
 		jne	error_eaocom
-@@con:
+.con:
 		sub	al,type_objcon-type_con	;must be objcon, return type_con/type_con_float, z=0
 
-@@exit:		pop	ecx
+.exit:		pop	ecx
 		ret
 ;
 ;
@@ -12701,16 +12738,16 @@ get_symbol:	push	edi
 
 		lea	edi,[symbol]		;edi points to symbol
 
-		mov	[byte edi],0		;get element and verify symbol
+		mov	byte [edi],0		;get element and verify symbol
 		call	get_element
 		mov	al,[edi]
 		call	check_word_chr
-		jc	@@error
+		jc		.error
 
 		call	measure_symbol		;get symbol size into ecx
 		clc
 
-@@error:	pop	edi
+.error:	pop	edi
 		ret
 ;
 ;
@@ -12725,21 +12762,21 @@ get_filename:	push	edi
 		mov	[filename_start],eax
 		call	back_element
 
-@@chr:		call	get_element		;get filename chr
+.chr:		call	get_element		;get filename chr
 
 		cmp	al,type_con		;valid constant?
-		jne	@@error
+		jne		.error
 		mov	eax,ebx
 		cmp	eax,20h
-		jb	@@error2
+		jb		.error2
 		cmp	eax,7Eh
-		ja	@@error2
+		ja		.error2
 		push	ecx
 		mov	ecx,9
-		lea	edi,[@@illegals]
+		lea	edi,[.@illegals]
 	repne	scasb
 		pop	ecx
-		je	@@error2
+		je		.error2
 
 		mov	[filename+ecx],al	;enter chr
 		inc	ecx
@@ -12751,7 +12788,7 @@ get_filename:	push	edi
 		ja	error_ftl
 
 		call	check_comma		;another chr?
-		je	@@chr
+		je		.chr
 
 		mov	[filename+ecx],0	;got filename, zero-terminate
 
@@ -12764,14 +12801,16 @@ get_filename:	push	edi
 		ret
 
 
-@@error:	jmp	error_ifufiq
-@@error2:	jmp	error_ifc
+.error:	jmp	error_ifufiq
+.error2:	jmp	error_ifc
 
-@@illegals:	db	'\/:*?"<>|'
+.@illegals	db	'\/:*?"<>|'
 
+		udataseg
 ddx		filename_start
 ddx		filename_finish
 dbx		filename, 254+1
+		codeseg
 ;
 ;
 ; Check for alignw/alignl
@@ -12780,15 +12819,15 @@ dbx		filename, 254+1
 ; if alignw/alignl, z=1 and ecx=01b/11b
 ;
 check_align:	cmp	al,type_asm_dir		;check for alignw/alignl
-		jne	@@done
+		jne		.done
 
 		cmp	bl,dir_alignw
 		mov	ecx,01b
-		je	@@done
+		je		.done
 
 		cmp	bl,dir_alignl
 		mov	ecx,11b
-@@done:
+.done:
 		ret
 ;
 ;
@@ -12865,12 +12904,12 @@ check_element:	push	ebx
 		call	get_element		;get element
 		pop	ebx			;pop target type
 		cmp	al,bl			;types match?
-		je	@@exit			;if so, z=1
+		je	.exit		;if so, z=1
 
 		call	back_element		;back up
 		inc	eax			;z=0
 
-@@exit:		pop	ebx
+.exit:		pop	ebx
 		pop	eax
 		ret
 ;
@@ -12880,14 +12919,14 @@ check_element:	push	ebx
 ; z=0 if no index
 ;
 check_index:	call	check_leftb		;check for '['
-		jne	@@exit
+		jne		.exit
 
 		mov	eax,[source_ptr]	;get source ptr
 		call	skip_exp		;skip expression
 		call	get_rightb		;get ']'
 		cmp	eax,eax			;z=1
 
-@@exit:		ret
+.exit:		ret
 ;
 ;
 ; Skip index - [exp]
@@ -12901,77 +12940,77 @@ skip_index:	call	get_leftb		;get '['
 ; z=1 if '+' or '+.'
 ;
 check_plus:	cmp	al,type_op
-		jne	@@exit
+		jne		.exit
 
 		cmp	bl,op_add		;'+' ?
-		je	@@exit
+		je		.exit
 
 		cmp	bl,op_fadd		;'+.' ?
 
-@@exit:		ret
+.exit:		ret
 ;
 ;
 ; Convert -constant to constant
 ;
 negcon_to_con:	cmp	al,type_op
-		jne	@@exit
+		jne		.exit
 
 		cmp	bl,op_sub
-		jne	@@exit
+		jne		.exit
 
 		push	eax
 		push	ebx
 		call	get_element
 		cmp	al,type_con
-		je	@@con
+		je		.con
 		cmp	al,type_con_float
-		jne	@@notcon
+		jne		.notcon
 
 		pop	eax			;constant float
 		pop	eax
 		mov	al,type_con_float
 		xor	ebx,80000000h
-		jmp	@@exit
+		jmp		.exit
 
-@@con:		pop	eax			;constant integer
+.con:		pop	eax			;constant integer
 		pop	eax
 		mov	al,type_con
 		neg	ebx
-		jmp	@@exit
+		jmp		.exit
 
-@@notcon:	call	back_element
+.notcon:	call	back_element
 		pop	ebx
 		pop	eax
 
-@@exit:		ret
+.exit:		ret
 ;
 ;
 ; Convert op_sub to op_neg
 ; z=1 if converted
 ;
 sub_to_neg:	cmp	al,type_op
-		jne	@@exit
+		jne		.exit
 
 		cmp	bl,op_sub
-		jne	@@exit
+		jne		.exit
 
 		mov	ebx,oc_neg
 
-@@exit:		ret
+.exit:		ret
 ;
 ;
 ; Convert op_fsub to op_fneg
 ; z=1 if converted
 ;
 fsub_to_fneg:	cmp	al,type_op
-		jne	@@exit
+		jne		.exit
 
 		cmp	bl,op_fsub
-		jne	@@exit
+		jne		.exit
 
 		mov	ebx,oc_fneg
 
-@@exit:		ret
+.exit:		ret
 ;
 ;
 ; Enter al/ax/eax into obj
@@ -12991,7 +13030,7 @@ enter_obj:	push	edi
 
 		inc	[obj_ptr]
 
-		add	edi,offset obj
+		add	edi,obj
 		stosb
 
 		pop	edi
@@ -13072,12 +13111,12 @@ compile_oos_exp:
 compile_range:	call	compile_exp		;compile first value
 
 		call	check_dotdot		;check for '..'
-		jne	@@exit
+		jne		.exit
 
 		call	compile_exp		;compile second value
 		cmp	eax,eax			;z=1
 
-@@exit:		ret
+.exit:		ret
 ;
 ;
 ; Get value/range
@@ -13091,15 +13130,15 @@ get_range:	call	get_value_int		;get first value into eax and ebx
 
 		call	check_dotdot		;check for '..'
 		pop	[source_finish]		;in case single value, restore source_finish
-		jne	@@done
+		jne		.done
 
 		call	get_value_int		;get second value into ebx
 
 		cmp	eax,ebx			;low in eax, high in ebx
-		jle	@@done
+		jle		.done
 		xchg	eax,ebx
 
-@@done:		pop	[source_start]		;restore source_start
+.done:		pop	[source_start]		;restore source_start
 		ret
 ;
 ;
@@ -13110,11 +13149,11 @@ compile_parameters:
 
 		call	get_left		;get '('
 
-		jecxz	@@done			;any parameters?
+		jecxz	.done		;any parameters?
 
 		call	compile_parameters_np	;compile parameters with no parentheses
 
-@@done:		jmp	get_right		;get ')'
+.done:		jmp	get_right		;get ')'
 ;
 ;
 ; Compile parameters with no parentheses - accommodates instructions/methods with multiple return values
@@ -13124,14 +13163,14 @@ compile_parameters_np:
 
 		push	eax
 
-@@loop:		call	compile_parameter	;compile parameter, may be method with multiple return values
+.loop:		call	compile_parameter	;compile parameter, may be method with multiple return values
 		sub	ecx,eax			;subtract compiled parameters from target parameter count
 		js	error_enope		;underflow?
-		jz	@@done			;done?
+		jz	.done		;done?
 		call	get_comma		;get comma between parameters
-		jmp	@@loop
+		jmp		.loop
 
-@@done:		pop	eax
+.done:		pop	eax
 		ret
 ;
 ;
@@ -13146,16 +13185,16 @@ compile_parameters_mptr:
 
 		call	get_left		;get '('
 		call	check_right		;check ')' for no parameters
-		je	@@noparams
+		je		.noparams
 
-@@param:	call	compile_parameter	;compile parameters
+.param:	call	compile_parameter	;compile parameters
 		add	ecx,eax
 		cmp	ecx,params_limit
 		ja	error_loxpe
 		call	get_comma_or_right
-		je	@@param
+		je		.param
 
-@@noparams:	pop	eax
+.noparams:	pop	eax
 		ret
 ;
 ;
@@ -13180,12 +13219,12 @@ compile_parameter:
 
 
 		cmp	al,type_i_flex		;flex instruction?
-		jne	@@notflex
+		jne		.notflex
 		movzx	ecx,bh			;multiple return values?
 		and	ecx,flex_results
 		shr	ecx,flex_results_shift
 		cmp	ecx,2
-		jb	@@single
+		jb		.single
 		push	ecx			;yes, save number of results
 		push	[source_start]		;save source pointers
 		push	[source_finish]
@@ -13194,31 +13233,31 @@ compile_parameter:
 		pop	[source_start]
 		pop	eax			;restore number of results
 		pop	ebx			;pop source pointer
-		jmp	@@exit
-@@notflex:
+		jmp		.exit
+.notflex:
 		cmp	al,type_obj		;obj{[]}.method({params,...}) ?
-		jne	@@notobj
+		jne		.notobj
 		call	check_index		;skip any index (any index before an objcon will be caught in compile_exp)
 		call	get_dot			;get '.'
 		mov	eax,ebx			;get objpub/objcon symbol
 		call	get_obj_symbol
-		jne	@@single		;if not objpub, must be constant
-		mov	esi,offset ct_objpub
-		jmp	@@checkmult
-@@notobj:
+		jne	.single	;if not objpub, must be constant
+		mov	esi,ct_objpub
+		jmp		.checkmult
+.notobj:
 		cmp	al,type_method		;method({params,...}) ?
-		mov	esi,offset ct_method
-		je	@@checkmult
+		mov	esi,ct_method
+		je		.checkmult
 
 		call	check_var_method	;var({params,...}){:returns} ?
-		jne	@@single		;if not var method, compile as expression
-		mov	esi,offset ct_method_ptr
-		jmp	@@checkmult2
+		jne	.single	;if not var method, compile as expression
+		mov	esi,ct_method_ptr
+		jmp		.checkmult2
 
-@@checkmult:	shr	ebx,20			;multiple return values?
+.checkmult:	shr	ebx,20			;multiple return values?
 		and	ebx,0Fh
-@@checkmult2:	cmp	ebx,2
-		jb	@@single		;if no result, will be caught by compile_exp
+.checkmult2:	cmp	ebx,2
+		jb	.single	;if no result, will be caught by compile_exp
 
 		pop	edx			;get source pointer into edx for ct_method_ptr
 		mov	[source_ptr],edx	;back up to obj/method/var symbol
@@ -13232,14 +13271,14 @@ compile_parameter:
 		pop	[source_finish]		;restore source pointers in case error
 		pop	[source_start]
 		pop	eax			;restore number of results
-		jmp	@@exit
+		jmp		.exit
 
 		
-@@single:	pop	[source_ptr]		;compile expression
+.single:	pop	[source_ptr]		;compile expression
 		call	compile_exp		;will error if no return value
 		mov	eax,1			;set one result
 
-@@exit:		pop	edi
+.exit:		pop	edi
 		pop	esi
 		pop	edx
 		pop	ecx
@@ -13267,29 +13306,29 @@ compile_parameter_send:
 
 
 		cmp	al,type_obj		;obj{[]}.method({params,...}) ?
-		jne	@@notobj
+		jne		.notobj
 		call	check_index		;skip any index
 		call	get_dot			;get '.'
 		mov	eax,ebx			;get objpub/objcon symbol
 		call	get_obj_symbol
-		jne	@@exp			;if not objpub, must be constant
-		mov	esi,offset ct_objpub
-		jmp	@@checkmult
-@@notobj:
+		jne	.exp		;if not objpub, must be constant
+		mov	esi,ct_objpub
+		jmp		.checkmult
+.notobj:
 		cmp	al,type_method		;method({params,...}) ?
-		mov	esi,offset ct_method
-		je	@@checkmult
+		mov	esi,ct_method
+		je		.checkmult
 
 		call	check_var_method	;var({params,...}){:returns} ?
-		jne	@@exp			;if not var method, compile as expression
-		mov	esi,offset ct_method_ptr
-		jmp	@@checkmult2
+		jne	.exp		;if not var method, compile as expression
+		mov	esi,ct_method_ptr
+		jmp		.checkmult2
 
-@@checkmult:	shr	ebx,20			;check return values?
+.checkmult:	shr	ebx,20			;check return values?
 		and	ebx,0Fh
-@@checkmult2:	cmp	ebx,1
+.checkmult2:	cmp	ebx,1
 		ja	error_spmcrmv		;if multiple return values, not allowed by SEND
-		je	@@exp			;if one return value, compile as expression
+		je	.exp		;if one return value, compile as expression
 
 		pop	edx			;no return value, get source pointer into edx for ct_method_ptr
 		mov	[source_ptr],edx	;back up to obj/method/var symbol
@@ -13302,14 +13341,14 @@ compile_parameter_send:
 		pop	[source_finish]		;restore source pointers in case error
 		pop	[source_start]
 		mov	eax,0			;set no result
-		jmp	@@exit
+		jmp		.exit
 
 		
-@@exp:		pop	[source_ptr]		;compile expression
+.exp:		pop	[source_ptr]		;compile expression
 		call	compile_exp
 		mov	eax,1			;set one result
 
-@@exit:		pop	edi
+.exit:		pop	edi
 		pop	esi
 		pop	edx
 		pop	ecx
@@ -13331,37 +13370,37 @@ check_var_method:
 
 		call	check_variable		;check for variable
 		mov	ebx,esi			;save variable address in ebx
-		jne	@@not			;if not variable, not method
+		jne	.not		;if not variable, not method
 		call	check_left		;if no '(', not method
-		jne	@@not
+		jne		.not
 
 		cmp	ch,type_register	;if RECV(), no parameters allowed, one return value
-		jne	@@notrecv
+		jne		.notrecv
 		cmp	ebx,mrecv_reg
-		jne	@@notrecv
+		jne		.notrecv
 		call	get_right
 		mov	ebx,1
-		jmp	@@is
-@@notrecv:
+		jmp		.is
+.notrecv:
 		cmp	ch,type_register	;if SEND(param{,...}), parameters allowed, no return value
-		jne	@@notsend
+		jne		.notsend
 		cmp	ebx,msend_reg
-		jne	@@notsend
+		jne		.notsend
 		call	scan_to_right
 		mov	ebx,0
-		jmp	@@is
-@@notsend:
+		jmp		.is
+.notsend:
 		call	scan_to_right		;skip parameters to ')'
 		call	check_colon		;check for ':'
 		mov	ebx,0			;if no colon, no return value
-		jne	@@is
+		jne		.is
 		call	get_con_int		;got ':', get return value count
 		cmp	ebx,results_limit
 		ja	error_loxre
 
-@@is:		cmp	eax,eax			;is var method, z=1
+.is:		cmp	eax,eax			;is var method, z=1
 
-@@not:		pop	[source_finish]		;restore source pointers in case error
+.not:		pop	[source_finish]		;restore source pointers in case error
 		pop	[source_start]
 
 		pop	edi
@@ -13379,14 +13418,14 @@ get_method_ptr:	call	get_element		;get variable name
 		call	get_variable		;get variable
 
 		test	ecx,var_bitfield_flag	;no bitfield allowed
-		jnz	@@exit
+		jnz		.exit
 
 		cmp	cl,2			;long hub variable is allowed
-		je	@@exit
+		je		.exit
 
 		cmp	ch,type_register	;register is allowed
 
-@@exit:		pop	[source_finish]		;pop source pointers
+.exit:		pop	[source_finish]		;pop source pointers
 		pop	[source_start]
 
 		jne	error_mpmblv		;error?
@@ -13465,15 +13504,15 @@ check_variable:	push	eax
 		push	ebx
 
 		cmp	al,type_recv		;RECV?
-		jne	@@notrecv
+		jne		.notrecv
 		mov	al,type_register
 		mov	ebx,mrecv_reg
-@@notrecv:
+.notrecv:
 		cmp	al,type_send		;SEND?
-		jne	@@notsend
+		jne		.notsend
 		mov	al,type_register
 		mov	ebx,msend_reg
-@@notsend:
+.notsend:
 		xor	ecx,ecx			;reset flags
 
 		mov	esi,ebx			;trim in case type_dat_???? (cog address in top 12 bits)
@@ -13483,30 +13522,30 @@ check_variable:	push	eax
 
 		mov	ch,type_loc_byte	;local?
 		cmp	al,ch
-		jb	@@notloc
+		jb		.notloc
 		cmp	al,type_loc_long
-		jbe	@@lvdh
-@@notloc:
+		jbe		.lvdh
+.notloc:
 		mov	ch,type_var_byte	;var?
 		cmp	al,ch
-		jb	@@notvar
+		jb		.notvar
 		cmp	al,type_var_long
-		jbe	@@lvdh
-@@notvar:
+		jbe		.lvdh
+.notvar:
 		mov	ch,type_dat_byte	;dat?
 		cmp	al,ch
-		jb	@@notdat
+		jb		.notdat
 		cmp	al,type_dat_long
-		jbe	@@lvdh
-@@notdat:
+		jbe		.lvdh
+.notdat:
 		mov	ch,type_hub_byte	;hub?
 		cmp	al,ch
-		jb	@@nothub
+		jb		.nothub
 		cmp	al,type_hub_long
-		jbe	@@lvdh
-@@nothub:
+		jbe		.lvdh
+.nothub:
 		cmp	al,type_reg		;reg?
-		jne	@@notreg
+		jne		.notreg
 		call	get_leftb
 		mov	bl,10b
 		call	try_value_int
@@ -13516,29 +13555,29 @@ check_variable:	push	eax
 		mov	al,type_register
 		mov	esi,ebx
 		mov	edi,[source_ptr]
-@@notreg:
+.notreg:
 		cmp	al,type_field		;FIELD[memfield]?
-		jne	@@notfield
+		jne	.notfield
 		mov	ch,type_field
 		call	skip_index
 		call	check_index		;check for [index]
-		jne	@@isvar
+		jne	.isvar
 		or	ecx,var_index_flag
-		jmp	@@isvar
-@@notfield:
+		jmp	.isvar
+.notfield:
 		mov	ch,al			;other
 
 		cmp	al,type_register	;register?
-		je	@@checkindex
+		je		.checkindex
 
 		cmp	al,type_size		;BYTE/WORD/LONG?
-		jne	@@exit			;if not a variable, exit with z=0
+		jne	.exit			;if not a variable, exit with z=0
 		mov	cl,bl
 		call	skip_index		;skip [base]
-		jmp	@@checkindex
+		jmp		.checkindex
 
-@@lvdh:		call	check_dot		;local/var/dat/hub, check for .BYTE/WORD/LONG
-		jne	@@lvdhnodot
+.lvdh:		call	check_dot		;local/var/dat/hub, check for .BYTE/WORD/LONG
+		jne		.lvdhnodot
 		push	eax			;got '.', check for BYTE/WORD/LONG
 		push	ebx
 		call	get_element
@@ -13546,35 +13585,35 @@ check_variable:	push	eax
 		mov	cl,bl
 		pop	ebx
 		pop	eax
-		jne	@@lvdhbackup
+		jne		.lvdhbackup
 		or	ecx,var_size_override	;got .BYTE/WORD/LONG, set size override flag
-		jmp	@@checkindex
-@@lvdhbackup:	call	back_element
+		jmp		.checkindex
+.lvdhbackup:	call	back_element
 		call	back_element
-@@lvdhnodot:	mov	cl,al			;get size into cl
+.lvdhnodot:	mov	cl,al			;get size into cl
 		sub	cl,ch
 
-@@checkindex:	call	check_index		;check for [index]
-		jne	@@noindex
+.checkindex:	call	check_index		;check for [index]
+		jne		.noindex
 		or	ecx,var_index_flag
-@@noindex:
+.noindex:
 		call	check_dot		;check for .[bitfield]
-		jne	@@nobf
+		jne		.nobf
 		or	ecx,var_bitfield_flag	;set bitfield flag
 		call	get_leftb		;get '['
 		call	skip_exp_check_con	;skip expression, checking for constant
-		jnz	@@notcon
+		jnz		.notcon
 		or	ecx,var_bitfield_con
-@@notcon:	call	check_dotdot		;check for '..'
-		jne	@@bfrb
+.notcon:	call	check_dotdot		;check for '..'
+		jne		.bfrb
 		call	skip_exp_check_con	;skip expression, checking for constant
-		jz	@@bfrb
+		jz		.bfrb
 		and	ecx,not var_bitfield_con
-@@bfrb:		call	get_rightb		;get ']'
-@@nobf:
-@@isvar:	xor	eax,eax			;z=1
+.bfrb:		call	get_rightb		;get ']'
+.nobf:
+.isvar:	xor	eax,eax			;z=1
 
-@@exit:		pop	ebx
+.exit:		pop	ebx
 		pop	eax
 		ret
 ;
@@ -13589,221 +13628,221 @@ compile_var:	push	[source_ptr]
 
 
 		test	ecx,var_bitfield_flag	;compile any non-constant bitfield first
-		jz	@@nobf
+		jz		.nobf
 		test	ecx,var_bitfield_con	;if bitfield-constant, nothing to compile here
-		jnz	@@nobf
+		jnz		.nobf
 		push	[source_ptr]		;save source_ptr
 		cmp	ch,type_size		;if byte/word/long, skip [base]
-		jne	@@bfnotsize
+		jne		.bfnotsize
 		call	skip_index
-@@bfnotsize:	test	ecx,var_size_override	;if size override, skip .BYTE/WORD/LONG
-		jz	@@bfnsor
+.bfnotsize:	test	ecx,var_size_override	;if size override, skip .BYTE/WORD/LONG
+		jz		.bfnsor
 		call	get_dot
 		call	get_size
-@@bfnsor:	test	ecx,var_index_flag	;if index, skip [index]
-		jz	@@bfnoindex
+.bfnsor:	test	ecx,var_index_flag	;if index, skip [index]
+		jz		.bfnoindex
 		call	skip_index
-@@bfnoindex:	call	get_dot			;get '.'
+.bfnoindex:	call	get_dot			;get '.'
 		call	get_leftb		;get '['
 		call	compile_exp		;compile bitfield expression
 		call	check_dotdot		;'top..bottom'?
-		jne	@@bfnotspan
+		jne		.bfnotspan
 		call	compile_exp
 		mov	al,bc_bitrange
 		call	enter_obj
 		mov	al,bc_addbits
 		call	enter_obj
-@@bfnotspan:	call	get_rightb		;get ']'
+.bfnotspan:	call	get_rightb		;get ']'
 		pop	[source_ptr]		;restore source_ptr
-@@nobf:
+.nobf:
 
 		cmp	ch,type_field		;FIELD[memfield]?
-		jne	@@notfield
+		jne	.notfield
 		call	compile_index
 		test	ecx,var_index_flag	;index?
 		mov	al,bc_setup_field_p
-		jz	@@entersetup
+		jz	.entersetup
 		call	compile_index
 		mov	al,bc_setup_field_pi
-		jmp	@@entersetup
-@@notfield:
+		jmp	.entersetup
+.notfield:
 
 		cmp	ch,type_register	;register?
-		jne	@@notreg
+		jne		.notreg
 
 		cmp	esi,pasm_regs+0		;pasm_regs 0..7 with no index?
-		jb	@@notregpasm
+		jb		.notregpasm
 		cmp	esi,pasm_regs+7
-		ja	@@notregpasm
+		ja		.notregpasm
 		test	ecx,var_index_flag	;index?
-		jnz	@@notregpasm
+		jnz		.notregpasm
 		mov	eax,esi			;enter setup $1F8..$1FF bytecode
 		sub	eax,pasm_regs
 		add	eax,bc_setup_reg_1D8_1F8+0
-		jmp	@@entersetup
-@@notregpasm:
+		jmp		.entersetup
+.notregpasm:
 		cmp	esi,1F8h		;$1F8..$1FF with no index?
-		jb	@@notregio
+		jb		.notregio
 		cmp	esi,1FFh
-		ja	@@notregio
+		ja		.notregio
 		test	ecx,var_index_flag	;index?
-		jnz	@@notregio
+		jnz		.notregio
 		mov	eax,esi			;enter setup $1F8..$1FF bytecode
 		sub	eax,1F8h
 		add	eax,bc_setup_reg_1D8_1F8+8
-		jmp	@@entersetup
-@@notregio:
+		jmp		.entersetup
+.notregio:
 		test	ecx,var_index_flag	;index?
 		mov	al,bc_setup_reg		;get non-index bytecode
-		jz	@@notregi		;if no index, got bytecode and reg
-		call	@@compileindex		;compile index, checking for constant
+		jz	.notregi	;if no index, got bytecode and reg
+		call	.compileindex	;compile index, checking for constant
 		mov	al,bc_setup_reg_pi	;get index bytecode
-		jnz	@@notregi		;if not constant index, got bytecode and reg
+		jnz	.notregi	;if not constant index, got bytecode and reg
 		mov	al,bc_setup_reg		;constant, revert to non-index bytecode
 		add	esi,[con_value]		;add index into reg
-@@notregi:	call	enter_obj		;enter setup bytecode
+.notregi:	call	enter_obj		;enter setup bytecode
 		mov	eax,esi			;sign-extend to express bottom/top reg addresses in one byte
 		shl	eax,32-9
 		sar	eax,32-9
 		call	compile_rfvars		;compile rfvars for base register
-		jmp	@@enterbit
-@@notreg:
+		jmp		.enterbit
+.notreg:
 
 		cmp	ch,type_size		;size BYTE/WORD/LONG?
-		jne	@@notsize
+		jne		.notsize
 		test	ecx,var_index_flag	;index?
 		mov	al,bc_setup_byte_pa	;without index
-		jz	@@sizeni
+		jz		.sizeni
 		call	compile_index		;with index
 		mov	al,bc_setup_byte_pb_pi
-@@sizeni:	call	compile_index
+.sizeni:	call	compile_index
 		add	al,cl
-		jmp	@@entersetup
-@@notsize:
+		jmp		.entersetup
+.notsize:
 
 		test	ecx,var_size_override	;if size override, skip .BYTE/WORD/LONG
-		jz	@@nosor
+		jz		.nosor
 		call	get_dot
 		call	get_size
-@@nosor:
+.nosor:
 		cmp	ch,type_var_byte	;first 16 var longs with no index?
-		jne	@@notvar16
+		jne		.notvar16
 		cmp	cl,2			;long?
-		jne	@@notvar16
+		jne		.notvar16
 		test	esi,11b			;long aligned?
-		jnz	@@notvar16
+		jnz		.notvar16
 		cmp	esi,16*4		;first 16?
-		jae	@@notvar16
+		jae		.notvar16
 		test	ecx,var_index_flag	;no index?
-		jnz	@@notvar16
+		jnz		.notvar16
 		mov	eax,esi			;get address nibble
 		shr	eax,2
 		or	al,bc_setup_var_0_15	;setup, also used for read/write bitfield
-		jmp	@@entersetup
-@@notvar16:
+		jmp		.entersetup
+.notvar16:
 
 		cmp	ch,type_loc_byte	;first 16 local longs with no index?
-		jne	@@notloc16
+		jne		.notloc16
 		cmp	cl,2			;long?
-		jne	@@notloc16
+		jne		.notloc16
 		test	esi,11b			;long aligned?
-		jnz	@@notloc16
+		jnz		.notloc16
 		cmp	esi,16*4		;first 16?
-		jae	@@notloc16
+		jae		.notloc16
 		test	ecx,var_index_flag	;no index?
-		jnz	@@notloc16
+		jnz		.notloc16
 		mov	eax,esi			;get address nibble
 		shr	eax,2
 		test	ecx,var_bitfield_flag	;if bitfield, use setup
-		jnz	@@loc16setup
+		jnz		.loc16setup
 		cmp	dl,2			;setup?
-		jae	@@loc16setup
+		jae		.loc16setup
 		cmp	dl,1			;write?
-		je	@@loc16write
+		je		.loc16write
 		or	al,bc_read_local_0_15	;read
-		jmp	@@enter
-@@loc16write:	or	al,bc_write_local_0_15	;write
-		jmp	@@enter
-@@loc16setup:	or	al,bc_setup_local_0_15	;setup, also used for read/write bitfield
-		jmp	@@entersetup
-@@notloc16:
+		jmp		.enter
+.loc16write:	or	al,bc_write_local_0_15	;write
+		jmp		.enter
+.loc16setup:	or	al,bc_setup_local_0_15	;setup, also used for read/write bitfield
+		jmp		.entersetup
+.notloc16:
 
 		cmp	ch,type_hub_byte	;hub byte/word/long with possible index?
-		jne	@@nothub
+		jne		.nothub
 
 		cmp	dl,0			;read CLKFREQ with no index nor bitfield?
-		jne	@@notrdclkfreq
+		jne		.notrdclkfreq
 		cmp	cl,2			;long?
-		jne	@@notrdclkfreq
+		jne		.notrdclkfreq
 		cmp	esi,clkfreq_address	;CLKFREQ address?
-		jne	@@notrdclkfreq
+		jne		.notrdclkfreq
 		test	ecx,var_index_flag or var_bitfield_flag		;no index or bitfield?
-		jnz	@@notrdclkfreq
+		jnz		.notrdclkfreq
 		mov	al,bc_hub_bytecode	;hub bytecode
 		call	enter_obj
 		mov	al,bc_read_clkfreq	;read-clkfreq bytecode
-		jmp	@@enter
-@@notrdclkfreq:
+		jmp		.enter
+.notrdclkfreq:
 		push	ebx			;compile address
 		mov	ebx,esi
 		call	compile_constant
 		pop	ebx
 		test	ecx,var_index_flag	;index?
 		mov	al,bc_setup_byte_pa	;without index
-		jz	@@hubni
+		jz		.hubni
 		call	compile_index		;with index
 		mov	al,bc_setup_byte_pb_pi
-@@hubni:	add	al,cl
-		jmp	@@entersetup
-@@nothub:
+.hubni:	add	al,cl
+		jmp		.entersetup
+.nothub:
 
 		mov	al,cl			;pbase/vbase/dbase byte/word/long with possible index
 		mov	ah,6			;get size*6 to begin setup bytecode
 		mul	ah
 		add	al,bc_setup_byte_pbase
 		cmp	ch,type_dat_byte	;pbase?
-		je	@@gotbase
+		je		.gotbase
 		inc	al
 		cmp	ch,type_var_byte	;vbase?
-		je	@@gotbase
+		je		.gotbase
 		inc	al			;dbase
-@@gotbase:	test	ecx,var_index_flag	;index?
-		jz	@@baseni
+.gotbase:	test	ecx,var_index_flag	;index?
+		jz		.baseni
 		add	al,3			;index, make index bytecode
-		call	@@compileindex		;compile index, checking for constant
-		jnz	@@baseni		;if not constant, keep compiled index
+		call	.compileindex	;compile index, checking for constant
+		jnz	.baseni	;if not constant, keep compiled index
 		sub	al,3			;constant, revert to non-index bytecode
 		shl	[con_value],cl		;scale index constant
 		add	esi,[con_value]		;add index into offset
-@@baseni:
+.baseni:
 		call	enter_obj		;enter setup bytecode
 		mov	eax,esi			;compile rfvar for base offset
 		call	compile_rfvar
-		jmp	@@enterbit
+		jmp		.enterbit
 
 
-@@entersetup:	call	enter_obj		;enter variable-setup bytecode
+.entersetup:	call	enter_obj		;enter variable-setup bytecode
 
 
-@@enterbit:	test	ecx,var_bitfield_flag	;bitfield?
-		jz	@@nobit
+.enterbit:	test	ecx,var_bitfield_flag	;bitfield?
+		jz		.nobit
 		call	get_dot			;get '.'
 		call	get_leftb		;get '['
 		test	ecx,var_bitfield_con	;constant bitfield?
-		jnz	@@bfcon
+		jnz		.bfcon
 		mov	al,bc_setup_bfield_pop	;not constant bitfield, already compiled
 		call	skip_exp		;skip bitfield
 		call	check_dotdot
-		jne	@@bitsetup
+		jne		.bitsetup
 		call	skip_exp
-		jmp	@@bitsetup
-@@bfcon:
+		jmp		.bitsetup
+.bfcon:
 		call	skip_exp_check_con	;skip expression, getting constant
 		jnz	error_eicon		;(should not error)
 		mov	eax,[con_value]		;get constant
 		and	eax,3FFh
 		call	check_dotdot		;check for '..'
-		jne	@@bitcompile
+		jne		.bitcompile
 		call	skip_exp_check_con	;skip expression, getting constant
 		jnz	error_eicon		;(should not error)
 		sub	eax,[con_value]		;get size of bitspan in eax
@@ -13811,34 +13850,34 @@ compile_var:	push	[source_ptr]
 		shl	eax,5
 		and	[con_value],1Fh
 		or	eax,[con_value]
-@@bitcompile:	cmp	eax,31
-		jbe	@@bitcon031
+.bitcompile:	cmp	eax,31
+		jbe		.bitcon031
 		push	eax			;>31, bitfield-rfvar
 		mov	al,bc_setup_bfield_rfvar
 		call	enter_obj
 		pop	eax
 		call	compile_rfvar
-		jmp	@@bitrightb
-@@bitcon031:	add	al,bc_setup_bfield_0_31	;bitfield-0..31
-@@bitsetup:	call	enter_obj
-@@bitrightb:	call	get_rightb		;get ']'
-@@nobit:
+		jmp		.bitrightb
+.bitcon031:	add	al,bc_setup_bfield_0_31	;bitfield-0..31
+.bitsetup:	call	enter_obj
+.bitrightb:	call	get_rightb		;get ']'
+.nobit:
 
 		mov	al,bc_read		;read?
 		cmp	dl,0
-		je	@@enter
+		je		.enter
 		mov	al,bc_write		;write?
 		cmp	dl,1
-		je	@@enter
+		je		.enter
 		mov	al,dh			;assign
-@@enter:	call	enter_obj
+.enter:	call	enter_obj
 
 		pop	[source_ptr]
 		ret
 
 
 
-@@compileindex:	call	get_leftb		;get '['
+.compileindex:	call	get_leftb		;get '['
 		call	compile_exp_check_con	;compile index, check for constant
 		pushf
 		call	get_rightb		;get ']'
@@ -13905,82 +13944,82 @@ compile_constant:
 		mov	eax,ebx			;check if -1..14
 		inc	eax
 		cmp	eax,14+1
-		ja	@@notimm
+		ja		.notimm
 		add	al,bc_con_n
 		call	enter_obj
-		jmp	@@exit
-@@notimm:
+		jmp		.exit
+.notimm:
 		cmp	ebx,000000FFh		;check if $000000xx
-		ja	@@notb
+		ja		.notb
 		mov	al,bc_con_rfbyte
 		call	enter_obj
 		mov	al,bl
 		call	enter_obj
-		jmp	@@exit
-@@notb:
+		jmp		.exit
+.notb:
 		cmp	ebx,0FFFFFF00h		;check if $FFFFFFxx
-		jb	@@notbn
+		jb		.notbn
 		mov	al,bc_con_rfbyte_not
 		call	enter_obj
 		mov	al,bl
 		not	al
 		call	enter_obj
-		jmp	@@exit
-@@notbn:
+		jmp		.exit
+.notbn:
 		mov	cl,0			;check if byte exponential
-@@exp:		mov	eax,1
+.exp:		mov	eax,1
 		shl	eax,cl
 		cmp	eax,ebx			;byte decode?
 		mov	ch,bc_con_rfbyte_decod
-		je	@@gotexp
+		je		.gotexp
 		not	eax			;byte decode not?
 		cmp	eax,ebx
 		mov	ch,bc_con_rfbyte_decod_not
-		je	@@gotexp
+		je		.gotexp
 		not	eax			;byte mask?
 		shl	eax,1
 		dec	eax
 		cmp	eax,ebx
 		mov	ch,bc_con_rfbyte_bmask
-		je	@@gotexp
+		je		.gotexp
 		not	eax			;byte mask not?
 		cmp	eax,ebx
 		mov	ch,bc_con_rfbyte_bmask_not
-		je	@@gotexp
+		je		.gotexp
 		inc	cl
 		cmp	cl,20h
-		jne	@@exp
-		jmp	@@notexp
+		jne		.exp
+		jmp		.notexp
 
-@@gotexp:	mov	al,ch
+.gotexp:	mov	al,ch
 		call	enter_obj
 		mov	al,cl
 		call	enter_obj
-		jmp	@@exit
-@@notexp:
+		jmp		.exit
+.notexp:
 		cmp	ebx,0000FFFFh		;check if $0000xxxx
-		ja	@@notw
+		ja		.notw
 		mov	al,bc_con_rfword
 		call	enter_obj
 		mov	eax,ebx
 		call	enter_obj_word
-		jmp	@@exit
-@@notw:
+		jmp		.exit
+.notw:
 		cmp	ebx,0FFFF0000h		;check if $FFFFxxxx
-		jb	@@notwn
+		jb		.notwn
 		mov	al,bc_con_rfword_not
 		call	enter_obj
 		mov	eax,ebx
 		not	eax
 		call	enter_obj_word
-		jmp	@@exit
-@@notwn:
+		jmp		.exit
+.notwn:
 		mov	al,bc_con_rflong	;must be $xxxxxxxx
 		call	enter_obj
 		mov	eax,ebx
 		call	enter_obj_long
 
-@@exit:		pop	ecx
+.exit:		pop	ecx
 		pop	ebx
 		pop	eax
 		ret
@@ -14016,26 +14055,26 @@ compile_rfvars:	push	eax
 		mov	ah,7Fh			;1..3-byte
 
 		cmp	ebx,0FFFFFFC0h		;1-byte?
-		jae	@@got1
+		jae		.got1
 		cmp	ebx,00000003Fh
-		jbe	@@got1
+		jbe		.got1
 
 		cmp	ebx,0FFFFE000h		;2-byte?
-		jae	@@got2
+		jae		.got2
 		cmp	ebx,000001FFFh
-		jbe	@@got2
+		jbe		.got2
 
 		cmp	ebx,0FFF00000h		;3-byte?
-		jae	@@got3
+		jae		.got3
 		cmp	ebx,0000FFFFFh
-		jbe	@@got3
+		jbe		.got3
 
 		mov	ah,0FFh			;4-byte
 
-		call	@@byte
-@@got3:		call	@@byte
-@@got2:		call	@@byte
-@@got1:		mov	al,bl
+		call		.byte
+.got3:		call		.byte
+.got2:		call		.byte
+.got1:		mov	al,bl
 		and	al,ah
 		call	enter_obj
 
@@ -14044,7 +14083,7 @@ compile_rfvars:	push	eax
 		ret
 
 
-@@byte:		mov	al,bl
+.byte:		mov	al,bl
 		or	al,80h
 		sar	ebx,7
 		jmp	enter_obj
@@ -14058,21 +14097,21 @@ compile_rfvar:	push	eax
 		and	eax,1FFFFFFFh		;mask valid bits
 		mov	ebx,eax
 
-		call	@@byte
-		call	@@byte
-		call	@@byte
+		call		.byte
+		call		.byte
+		call		.byte
 		mov	al,bl
-		jmp	@@last
+		jmp		.last
 
 
-@@byte:		mov	al,bl
+.byte:		mov	al,bl
 		shr	ebx,7
-		jz	@@pop
+		jz		.pop
 		or	al,80h
 		jmp	enter_obj
 
-@@pop:		pop	ebx
-@@last:		call	enter_obj
+.pop:		pop	ebx
+.last:		call	enter_obj
 
 		pop	ebx
 		pop	eax
@@ -14083,19 +14122,19 @@ compile_rfvar:	push	eax
 ; Enter data into pub/con list
 ;
 pubcon_symbol2:	lea	esi,[symbol2]		;enter symbol2 into pub/con list
-@@name:		lodsb
+.name:		lodsb
 		cmp	al,0
-		je	@@done
+		je		.done
 		call	pubcon_byte
-		jmp	@@name
-@@done:
+		jmp		.name
+.done:
 		ret
 
 
 pubcon_byte:	mov	edi,[pubcon_list_size]	;enter byte into pub/con list
 		cmp	edi,pubcon_list_limit
 		je	error_pclo
-		add	edi,offset pubcon_list
+		add	edi,pubcon_list
 		stosb
 		inc	[pubcon_list_size]
 
@@ -14161,9 +14200,9 @@ _disassemble:	lea	edi,[disassembler_string]	;edi points to string
 		mov	eax,edx				;print condition
 		or	eax,eax
 		mov	al,0Fh				;if NOP, use blank
-		jz	@@nop
+		jz		.nop
 		shr	eax,32-4
-@@nop:		mov	ah,12
+.nop:		mov	ah,12
 		mul	ah
 		lea	esi,[da_cond]
 		add	esi,eax
@@ -14175,17 +14214,17 @@ _disassemble:	lea	edi,[disassembler_string]	;edi points to string
 
 		lea	esi,[da_nop]			;if NOP, force NOP record
 		or	edx,edx
-		jz	@@gotinst
+		jz		.gotinst
 
 		lea	esi,[da_ins]			;determine instruction record
-@@find:		mov	eax,edx
+.find:		mov	eax,edx
 		and	eax,[esi+0]
 		cmp	eax,[esi+4]
-		je	@@gotinst
+		je		.gotinst
 		add	esi,16
-		jmp	@@find
+		jmp		.find
 
-@@gotinst:	mov	ah,[esi+8]			;got instruction entry, get operand code
+.gotinst:	mov	ah,[esi+8]			;got instruction entry, get operand code
 		add	esi,9				;print mnemonic
 		mov	ecx,7
 	rep	movsb
@@ -14194,63 +14233,63 @@ _disassemble:	lea	edi,[disassembler_string]	;edi points to string
 		stosb
 
 		movzx	eax,ah				;call operand handler
-		call	[@@operands+eax*4]
+		call	[.@operands+eax*4]
 
 		mov	ecx,flag_tab + 4		;print spaces to end of string
-		add	ecx,offset disassembler_string
+		add	ecx,disassembler_string
 		sub	ecx,edi
-		jbe	@@eos				;if at or beyond end of string, just zero-terminate it
+		jbe	.eos			;if at or beyond end of string, just zero-terminate it
 		mov	al,' '
 	rep	stosb
-@@eos:		mov	edi,offset disassembler_string + flag_tab + 4
+.eos:		mov	edi,disassembler_string + flag_tab + 4
 		mov	al,0				;zero-terminate string
 		stosb
 
 		ret
 
 
-@@operands	dd	offset do_addr20		;operand handlers
-		dd	offset do_aug
-		dd	offset do_cz
-		dd	offset do_d
-		dd	offset do_dc
-		dd	offset do_dc_modc
-		dd	offset do_dcz
-		dd	offset do_dcz_modcz
-		dd	offset do_ds
-		dd	offset do_ds_alt
-		dd	offset do_ds_alti
-		dd	offset do_ds_branch
-		dd	offset do_ds_byte
-		dd	offset do_ds_nib
-		dd	offset do_ds_ptr
-		dd	offset do_ds_single
-		dd	offset do_ds_word
-		dd	offset do_dsc
-		dd	offset do_dscz
-		dd	offset do_dscz_bit
-		dd	offset do_dscz_bit_log
-		dd	offset do_dscz_branch
-		dd	offset do_dscz_ptr
-		dd	offset do_dscz_single
-		dd	offset do_dsz
-		dd	offset do_dz_modz
-		dd	offset do_l
-		dd	offset do_lc
-		dd	offset do_lcz
-		dd	offset do_lcz_pin
-		dd	offset do_lcz_pin_log
-		dd	offset do_ls
-		dd	offset do_ls_branch
-		dd	offset do_ls_pin
-		dd	offset do_ls_ptr
-		dd	offset do_lsc
-		dd	offset do_lx
-		dd	offset do_none
-		dd	offset do_p_addr20
-		dd	offset do_s
-		dd	offset do_s_branch
-		dd	offset do_s_pin
+.@operands	dd do_addr20		;operand handlers
+		dd	do_aug
+		dd	do_cz
+		dd	do_d
+		dd	do_dc
+		dd	do_dc_modc
+		dd	do_dcz
+		dd	do_dcz_modcz
+		dd	do_ds
+		dd	do_ds_alt
+		dd	do_ds_alti
+		dd	do_ds_branch
+		dd	do_ds_byte
+		dd	do_ds_nib
+		dd	do_ds_ptr
+		dd	do_ds_single
+		dd	do_ds_word
+		dd	do_dsc
+		dd	do_dscz
+		dd	do_dscz_bit
+		dd	do_dscz_bit_log
+		dd	do_dscz_branch
+		dd	do_dscz_ptr
+		dd	do_dscz_single
+		dd	do_dsz
+		dd	do_dz_modz
+		dd	do_l
+		dd	do_lc
+		dd	do_lcz
+		dd	do_lcz_pin
+		dd	do_lcz_pin_log
+		dd	do_ls
+		dd	do_ls_branch
+		dd	do_ls_pin
+		dd	do_ls_ptr
+		dd	do_lsc
+		dd	do_lx
+		dd	do_none
+		dd	do_p_addr20
+		dd	do_s
+		dd	do_s_branch
+		dd	do_s_pin
 
 
 do_addr20:	jmp	da_addr20		;addr20
@@ -14306,9 +14345,9 @@ do_ds_alt:	call	da_d			;ds_alt
 		mov	eax,edx
 		and	eax,1 shl 18 + 1FFh
 		cmp	eax,1 shl 18
-		jne	@@s
+		jne		.s
 		ret
-@@s:		mov	al,','
+.s:		mov	al,','
 		stosb
 		jmp	da_s
 
@@ -14316,9 +14355,9 @@ do_ds_alti:	call	da_d			;ds_alti
 		mov	eax,edx
 		and	eax,1 shl 18 + 1FFh
 		cmp	eax,1 shl 18 + 164h
-		jne	@@s
+		jne		.s
 		ret
-@@s:		mov	al,','
+.s:		mov	al,','
 		stosb
 		jmp	da_s
 
@@ -14364,14 +14403,14 @@ do_ds_ptr:	call	da_d			;ds_ptr
 
 do_ds_single:	call	da_d			;ds_single
 		test	edx,1 shl 18
-		jnz	@@notsame
+		jnz		.notsame
 		mov	eax,edx
 		shr	eax,9
 		xor	eax,edx
 		and	eax,1FFh
-		jnz	@@notsame
+		jnz		.notsame
 		ret
-@@notsame:	mov	al,','
+.notsame:	mov	al,','
 		stosb
 		jmp	da_s
 
@@ -14434,16 +14473,16 @@ do_dscz_ptr:	call	da_d			;dscz_ptr
 
 do_dscz_single:	call	da_d			;dscz_single
 		test	edx,1 shl 18
-		jnz	@@notsame
+		jnz		.notsame
 		mov	eax,edx
 		shr	eax,9
 		xor	eax,edx
 		and	eax,1FFh
-		jz	@@flags
-@@notsame:	mov	al,','
+		jz		.flags
+.notsame:	mov	al,','
 		stosb
 		call	da_s
-@@flags:	jmp	da_flag
+.flags:	jmp	da_flag
 
 do_dsz:		call	da_d			;dsz
 		mov	al,','
@@ -14474,9 +14513,9 @@ do_lcz_pin_log:	call	da_l_pin_log		;lcz_pin_log
 		mov	ah,dl
 		and	ah,110b
 		test	edx,1 shl 20
-		jz	@@notc
+		jz		.notc
 		or	ah,001b
-@@notc:		jmp	da_flag_logic
+.notc:		jmp	da_flag_logic
 
 do_ls:		call	da_ls			;ls
 		mov	al,','
@@ -14668,7 +14707,7 @@ da_s_branch:	test	edx,1 shl 18
 		mov	ebx,[disassembler_addr]
 		and	ebx,0FFFFFh
 		cmp	ebx,400h
-		jae	@@hub
+		jae		.hub
 
 		add	eax,ebx
 		add	eax,1
@@ -14676,7 +14715,7 @@ da_s_branch:	test	edx,1 shl 18
 		mov	cl,3
 		jmp	da_hex
 
-@@hub:		shl	eax,2
+.hub:		shl	eax,2
 		add	eax,ebx
 		add	eax,4
 		and	eax,0FFFFFh
@@ -14690,7 +14729,7 @@ da_s_ptr:	test	edx,1 shl 18		;register or immediate?
 		jz	da_sr
 
 		test	edx,100h		;immediate ptr?
-		jnz	@@ptr
+		jnz		.ptr
 
 		mov	al,'#'			;8-bit address
 		stosb
@@ -14701,57 +14740,57 @@ da_s_ptr:	test	edx,1 shl 18		;register or immediate?
 		jmp	da_hex
 
 
-@@ptr:		test	dl,40h			;non-updating PTRx?
-		jnz	@@updt
+.ptr:		test	dl,40h			;non-updating PTRx?
+		jnz		.updt
 
-		call	@@ptrx
+		call		.ptrx
 
 		test	dl,3Fh			;non-0 index?
-		jz	@@exit
+		jz		.exit
 
 		mov	al,'['
 		stosb
 		test	dl,20h
-		jz	@@pos
+		jz		.pos
 		mov	al,'-'
 		stosb
-@@pos:		mov	al,dl
+.pos:		mov	al,dl
 		test	al,20h
-		jz	@@pos2
+		jz		.pos2
 		neg	al
-@@pos2:		and	al,3Fh
+.pos2:		and	al,3Fh
 		call	da_dec
 		mov	al,']'
 		stosb
-@@exit:		ret
+.exit:		ret
 
 
-@@updt:		test	dl,20h			;pre-update or post-update?
-		jnz	@@post
-		call	@@incdec
-@@post:		call	@@ptrx
+.updt:		test	dl,20h			;pre-update or post-update?
+		jnz		.post
+		call		.incdec
+.post:		call		.ptrx
 		test	dl,20h
-		jz	@@pre
-		call	@@incdec
-@@pre:
+		jz		.pre
+		call		.incdec
+.pre:
 		mov	al,dl			;non-1 index?
 		and	al,1Fh
 		cmp	al,01h
-		je	@@exit
+		je		.exit
 		cmp	al,1Fh
-		je	@@exit
+		je		.exit
 
 		mov	al,'['
 		stosb
 		mov	ah,dl
 		neg	ah
 		test	dl,10h
-		jnz	@@abs
+		jnz		.abs
 		neg	ah
 		test	dl,0Fh
-		jnz	@@abs
+		jnz		.abs
 		mov	ah,10h
-@@abs:		mov	al,ah
+.abs:		mov	al,ah
 		and	al,1Fh
 		call	da_dec
 		mov	al,']'
@@ -14759,7 +14798,7 @@ da_s_ptr:	test	edx,1 shl 18		;register or immediate?
 		ret
 
 
-@@ptrx:		mov	al,'p'
+.ptrx:		mov	al,'p'
 		stosb
 		mov	al,'t'
 		stosb
@@ -14767,16 +14806,16 @@ da_s_ptr:	test	edx,1 shl 18		;register or immediate?
 		stosb
 		mov	al,'a'
 		test	dl,80h
-		jz	@@ptra
+		jz		.ptra
 		mov	al,'b'
-@@ptra:		stosb
+.ptra:		stosb
 		ret
 
-@@incdec:	mov	al,'+'
+.incdec:	mov	al,'+'
 		test	dl,10h
-		jz	@@incdecpos
+		jz		.incdecpos
 		mov	al,'-'
-@@incdecpos:	stosb
+.incdecpos:	stosb
 		stosb
 		ret
 ;
@@ -14789,7 +14828,7 @@ da_flag:	call	da_flag_tab	;tab to flag position
 		shr	eax,19
 		and	eax,3
 		shl	eax,2		;multiply by four and point to flag string
-		lea	esi,[@@flag]
+		lea	esi,[.@flag]
 		add	esi,eax
 		mov	ecx,4		;print flag string
 	rep	movsb
@@ -14797,7 +14836,7 @@ da_flag:	call	da_flag_tab	;tab to flag position
 		ret
 
 
-@@flag	db	'    '			;flag effects (4 bytes each)
+.@flag	db	'    '			;flag effects (4 bytes each)
 	db	'wz  '
 	db	'wc  '
 	db	'wcz '
@@ -14810,7 +14849,7 @@ da_flag_logic:	call	da_flag_tab	;tab to flag position
 
 		movzx	eax,ah		;get index
 		shl	eax,2		;multiply by four and point to flag string
-		lea	esi,[@@flag]
+		lea	esi,[.@flag]
 		add	esi,eax
 		mov	ecx,4		;print flag string
 	rep	movsb
@@ -14818,7 +14857,7 @@ da_flag_logic:	call	da_flag_tab	;tab to flag position
 		ret
 
 
-@@flag	db	'wz  '			;flag effects (4 bytes each)
+.@flag	db	'wz  '			;flag effects (4 bytes each)
 	db	'wc  '
 	db	'andz'
 	db	'andc'
@@ -14831,15 +14870,15 @@ da_flag_logic:	call	da_flag_tab	;tab to flag position
 ; Tab to cl
 ;
 da_flag_tab:	mov	ecx,flag_tab	;need to print more spaces?
-		add	ecx,offset disassembler_string	;print spaces to end of string
+		add	ecx,disassembler_string	;print spaces to end of string
 		sub	ecx,edi
-		ja	@@tab
+		ja		.tab
 
 		add	edi,ecx		;back up and print space
 		dec	edi
 		mov	ecx,1
 
-@@tab:		mov	al,' '
+.tab:		mov	al,' '
 	rep	stosb
 
 		ret
@@ -14853,10 +14892,10 @@ da_addr20:	mov	al,'#'		;print '#'
 		mov	eax,[disassembler_addr]
 
 		test	edx,100000h	;relative or absolute?
-		jz	@@abs
+		jz		.abs
 
 		cmp	eax,400h	;relative cog or hub?
-		jae	@@relhub
+		jae		.relhub
 
 		shl	edx,31-19	;relative cog
 		sar	edx,31-19+2
@@ -14864,11 +14903,11 @@ da_addr20:	mov	al,'#'		;print '#'
 		inc	eax
 		jmp	da_addr
 
-@@relhub:	add	eax,edx		;relative hub
+.relhub:	add	eax,edx		;relative hub
 		add	eax,4
 		jmp	da_addr
 
-@@abs:		mov	al,'\'		;absolute
+.abs:		mov	al,'\'		;absolute
 		stosb
 		mov	eax,edx
 		jmp	da_addr
@@ -14876,7 +14915,7 @@ da_addr20:	mov	al,'#'		;print '#'
 ;
 ; Print address
 ;
-da_addr:	mov	[byte edi],'$'	;print '$'
+da_addr:	mov	byte [edi],'$'	;print '$'
 		inc	edi
 
 		and	eax,0FFFFFh	;mask address
@@ -14900,16 +14939,16 @@ da_hex:		movzx	ecx,cl		;clear upper ecx
 		ror	eax,cl
 		shr	cl,2
 
-@@digit:	rol	eax,4		;print hex digits
+.digit:	rol	eax,4		;print hex digits
 		push	eax
 		and	al,0Fh		;convert nibble in al to hex
 		add	al,'0'
 		cmp	al,'9'
-		jbe	@@got
+		jbe		.got
 		add	al,'A'-'9'-1
-@@got:		stosb
+.got:		stosb
 		pop	eax
-		loop	@@digit
+		loop	 .digit
 
 		ret
 ;
@@ -14918,16 +14957,16 @@ da_hex:		movzx	ecx,cl		;clear upper ecx
 ; al = value
 ;
 da_dec:		mov	ah,-1
-@@tens:		inc	ah
+.tens:		inc	ah
 		sub	al,10
-		jnc	@@tens
+		jnc		.tens
 
 		cmp	ah,0
-		je	@@ones
+		je		.ones
 		add	ah,'0'
 		mov	[edi],ah
 		inc	edi
-@@ones:
+.ones:
 		add	al,'0'+10
 		stosb
 		ret
@@ -14943,21 +14982,21 @@ da_reg:		lea	esi,[da_regs]	;point to IJMP3..INB operands
 
 
 da_opstr:	cmp	ah,0		;at operand yet?
-		je	@@got
+		je		.got
 
-@@skip:		lodsb			;nope, skip past current
+.skip:		lodsb			;nope, skip past current
 		cmp	al,0
-		jne	@@skip
+		jne		.skip
 		dec	ah
 		jmp	da_opstr	;check if at operand
 
-@@got:		lodsb			;got operand, check if done
+.got:		lodsb			;got operand, check if done
 		cmp	al,0
-		je	@@done
+		je		.done
 		stosb			;print chr
-		jmp	@@got		;loop
+		jmp	.got	;loop
 
-@@done:		ret
+.done:		ret
 ;
 ;
 ; Data
@@ -15650,6 +15689,7 @@ debug_symbols:
 ;
 ; Variables
 ;
+		udataseg
 ddx		ddsymbols_hash_auto,1000h	;auto symbols
 dbx		ddsymbols_auto,ddsymbols_limit_auto
 ddx		ddsymbols_ptr_auto
@@ -15667,28 +15707,29 @@ ddx		dd_sym_exists_ptr,32
 dbx		dd_name,symbol_limit+2
 
 ddx		debug_display_ptr
+		codeseg
 ;
 ;
 ; Reset debug symbols
 ;
 reset_debug_symbols:
 
-		mov	edi,offset ddsymbols_hash_auto		;reset debug symbols
+		mov	edi,ddsymbols_hash_auto		;reset debug symbols
 		call	reset_hash_table
 
-		mov	[symbol_ptr],		offset ddsymbols_auto	;write auto symbols
-		mov	[symbol_ptr_limit],	offset ddsymbols_auto + ddsymbols_limit_auto - (1+32+1+4+1+4)
-		mov	[symbol_hash_ptr],	offset ddsymbols_hash_auto
+		mov	[symbol_ptr],		ddsymbols_auto	;write auto symbols
+		mov	[symbol_ptr_limit],	ddsymbols_auto + ddsymbols_limit_auto - (1+32+1+4+1+4)
+		mov	[symbol_hash_ptr],	ddsymbols_hash_auto
 
 		lea	esi,[debug_symbols]			;enter debug symbols
 		call	enter_symbols
 
-		mov	edi,offset ddsymbols_hash_name		;reset name symbols
+		mov	edi,ddsymbols_hash_name		;reset name symbols
 		call	reset_hash_table
 
-		mov	[symbol_ptr],		offset ddsymbols_name	;write name symbols
-		mov	[symbol_ptr_limit],	offset ddsymbols_name + ddsymbols_limit_name - (1+32+1+4+1+4)
-		mov	[symbol_hash_ptr],	offset ddsymbols_hash_name
+		mov	[symbol_ptr],		ddsymbols_name	;write name symbols
+		mov	[symbol_ptr_limit],	ddsymbols_name + ddsymbols_limit_name - (1+32+1+4+1+4)
+		mov	[symbol_hash_ptr],	ddsymbols_hash_name
 
 		ret
 ;
@@ -15709,24 +15750,24 @@ parse_debug_string:
 		mov	[debug_display_ptr],0		;reset record pointer
 		lea	esi,[debug_display_string]	;point to source string
 		mov	[symbol2],0			;flag display-instance
-		mov	[@@close_flag],0		;flag display-command close
-		mov	[@@targets],0			;reset target count for existing-display command
+		mov	[.@close_flag],0		;flag display-command close
+		mov	[.@targets],0			;reset target count for existing-display command
 
 		call	get_dd_element			;check for display-instance or instance-name symbol
 		cmp	al,dd_dis			;new-display instance?
-		je	@@newinstance
+		je		.newinstance
 		cmp	al,dd_nam			;existing-display command?
-		je	@@command
+		je		.command
 
-@@abort:	mov	[debug_display_type+0],0	;abort due to unexpected type
+.abort:	mov	[debug_display_type+0],0	;abort due to unexpected type
 		ret
 
 
-@@newinstance:	call	enter_dd_record		;new display instance, enter display-instance record
+.newinstance:	call	enter_dd_record		;new display instance, enter display-instance record
 
 		call	get_dd_element		;check for unique instance name
 		cmp	al,dd_unk
-		jne	@@abort
+		jne		.abort
 
 		call	backup_symbol		;copy unique instance name to symbol2
 
@@ -15748,93 +15789,93 @@ parse_debug_string:
 
 		mov	eax,dd_nam		;ready to enter instance-name record
 		lea	ebx,[dd_name]		;value points to display name, id will be debug_display_new
-		jmp	@@enter			;enter instance-name record and process rest of elements
+		jmp	.enter		;enter instance-name record and process rest of elements
 
 
-@@command:	movzx	ecx,[@@targets]		;existing-display command
+.command:	movzx	ecx,[.@targets]		;existing-display command
 		mov	eax,[symbol_exists_ptr]	;save symbol ptr into index
 		mov	[dd_sym_exists_ptr+ecx*4],eax
-		inc	[@@targets]		;inc target count (will never exceed 32)
+		inc	[.@targets]		;inc target count (will never exceed 32)
 		mov	al,dd_nam		;enter instance-name record
 		call	enter_dd_record
 		call	get_dd_element		;get next element
 		cmp	al,dd_nam		;if another target display name, enter it
-		je	@@command
-		jmp	@@check			;not display name, process as rest of elements
+		je		.command
+		jmp	.check		;not display name, process as rest of elements
 
 
-@@enter:	call	enter_dd_record		;enter record
+.enter:	call	enter_dd_record		;enter record
 
 		call	get_dd_element		;process rest of elements
 
-@@check:	cmp	al,dd_key		;allow keyword, but check for command and dd_key_close
-		jne	@@notkey
+.check:	cmp	al,dd_key		;allow keyword, but check for command and dd_key_close
+		jne		.notkey
 		cmp	ebx,dd_key_close
-		jne	@@enter
+		jne		.enter
 		cmp	[symbol2],0
-		jne	@@enter
-		mov	[@@close_flag],1
-		jmp	@@enter
-@@notkey:
+		jne		.enter
+		mov	[.@close_flag],1
+		jmp		.enter
+.notkey:
 		cmp	al,dd_num		;allow number
-		je	@@enter
+		je		.enter
 
 		cmp	al,dd_str		;allow string
-		je	@@enter
+		je		.enter
 
 		cmp	al,0			;allow end
-		jne	@@abort
+		jne		.abort
 
 		cmp	[symbol2],0		;got to end without aborting, is this a new display instance or command?
-		je	@@commanddone
+		je		.commanddone
 
 
 		xor	ebx,ebx			;new display instance, determine its id
 		mov	eax,[debug_display_ena]
-@@getid:	test	eax,1
-		jz	@@gotid
+.getid:	test	eax,1
+		jz		.gotid
 		inc	ebx
 		cmp	ebx,32			;abort if no more id's
-		je	@@abort
+		je		.abort
 		shr	eax,1
-		jmp	@@getid
-@@gotid:
-		call	@@toggle		;set id bit in debug_display_ena
+		jmp		.getid
+.gotid:
+		call	.toggle	;set id bit in debug_display_ena
 
 		mov	[debug_display_new],ebx	;ebx and debug_display_new hold id
 
 		cmp	[dd_sym_exists],0	;does symbol already exist?
-		je	@@entersymbol
+		je		.entersymbol
 
 		mov	eax,[dd_sym_exists_ptr]	;symbol already exists, update type and value
-		mov	[byte eax-1],dd_nam
-		mov	[dword eax-1-4],ebx
-		jmp	@@done
+		mov	byte [eax-1],dd_nam
+		mov	dword [eax-1-4],ebx
+		jmp		.done
 
-@@entersymbol:	mov	al,dd_nam		;symbol doesn't exist, enter symbol
+.entersymbol:	mov	al,dd_nam		;symbol doesn't exist, enter symbol
 		call	enter_symbol2
-		jmp	@@done
+		jmp		.done
 
 
-@@commanddone:	movzx	ecx,[@@targets]		;existing-display command done, report number of display targets
+.commanddone:	movzx	ecx,[.@targets]		;existing-display command done, report number of display targets
 		mov	[debug_display_targs],cl
 
-		cmp	[@@close_flag],0	;was dd_key_close found?
-		je	@@done
+		cmp	[.@close_flag],0	;was dd_key_close found?
+		je		.done
 
-@@close:	mov	eax,[dd_sym_exists_ptr+ecx*4-4]	;yes, change display name symbol type(s) from dd_nam to dd_unk
-		mov	[byte eax-1],dd_unk
-		mov	bl,[byte eax-1-4]	;get id from symbol value
-		call	@@toggle		;cancel id bit in debug_display_ena
-		loop	@@close			;loop until done
+.close:	mov	eax,[dd_sym_exists_ptr+ecx*4-4]	;yes, change display name symbol type(s) from dd_nam to dd_unk
+		mov	byte [eax-1],dd_unk
+		mov	bl,byte [eax-1-4]	;get id from symbol value
+		call	.toggle	;cancel id bit in debug_display_ena
+		loop	.close		;loop until done
 
 
-@@done:		mov	al,0			;enter dd_end record (al=0)
+.done:		mov	al,0			;enter dd_end record (al=0)
 		jmp	enter_dd_record
 
 
 
-@@toggle:	push	ecx			;toggle debug_display_ena bit by id in bl
+.toggle:	push	ecx			;toggle debug_display_ena bit by id in bl
 		mov	cl,bl
 		mov	eax,1
 		shl	eax,cl
@@ -15842,21 +15883,22 @@ parse_debug_string:
 		pop	ecx
 		ret
 
-
-dbx		@@close_flag
-dbx		@@targets
+		udataseg
+dbx		.@close_flag
+dbx		.@targets
+		codeseg
 ;
 ;
 ; Get next element from debug display at esi - al=type and ebx=value
 ;
 get_dd_element:	call	check_dd_sym		;check for symbol
-		jnc	@@got
+		jnc		.got
 
 		call	check_dd_num		;check for number
-		jnc	@@got
+		jnc		.got
 
 		call	check_dd_str		;check for string
-		jnc	@@got
+		jnc		.got
 
 		lodsb				;get chr, inc ptr
 
@@ -15864,7 +15906,7 @@ get_dd_element:	call	check_dd_sym		;check for symbol
 		jne	get_dd_element
 
 		dec	esi			;repoint to end in case called again
-@@got:		ret
+.got:		ret
 ;
 ;
 ; Check for debug display symbol at esi
@@ -15872,7 +15914,7 @@ get_dd_element:	call	check_dd_sym		;check for symbol
 ;
 check_dd_sym:	mov	al,[esi]		;get initial chr
 		call	check_word_chr_initial	;check for '_' or alpha
-		jc	@@exit			;if not, exit with c=1
+		jc	.exit		;if not, exit with c=1
 
 
 		push	edi
@@ -15881,15 +15923,15 @@ check_dd_sym:	mov	al,[esi]		;get initial chr
 		mov	[dd_sym_start],esi	;save symbol start
 		lea	edi,[symbol]		;point to symbol
 
-@@chr:		lodsb				;gather symbol chrs
+.chr:		lodsb				;gather symbol chrs
 		call	check_word_chr
-		jc	@@got
+		jc		.got
 		cmp	ah,symbol_limit		;if symbol length at limit, ignore extra chrs
-		je	@@chr
+		je		.chr
 		stosb				;store chr into symbol
 		inc	ah			;inc symbol length
-		jmp	@@chr			;try next chr
-@@got:
+		jmp	.chr		;try next chr
+.got:
 		mov	[dd_sym_size],ah	;got symbol, save size
 		dec	esi			;repoint to chr after symbol
 		mov	al,0			;zero-terminate symbol
@@ -15899,7 +15941,7 @@ check_dd_sym:	mov	al,[esi]		;get initial chr
 
 		pop	edi
 		clc				;c=0
-@@exit:		ret
+.exit:		ret
 ;
 ;
 ; Check for number at esi
@@ -15912,66 +15954,66 @@ check_dd_num:	push	esi			;save original ptr
 		lodsb				;get initial chr
 
 		cmp	al,'-'			;negate?
-		jne	@@notneg
+		jne		.notneg
 		inc	ah
 		lodsb				;get next chr
-@@notneg:
+.notneg:
 		cmp	al,'$'			;hex?
-		je	@@hex
+		je		.hex
 
 		cmp	al,'%'			;binary?
-		je	@@bin
+		je		.bin
 
 		sub	al,'0'			;decimal?
-		jb	@@nope
+		jb		.nope
 		cmp	al,9
-		jbe	@@dec
+		jbe		.dec
 
-@@nope:		pop	esi			;not a number, restore original ptr
+.nope:		pop	esi			;not a number, restore original ptr
 		stc				;c=1
 		ret
 		
 
-@@hex:		lodsb				;hex
+.hex:		lodsb				;hex
 		call	check_hex
-		jc	@@nope
+		jc		.nope
 
-@@hexloop:	shl	ebx,4
+.hexloop:	shl	ebx,4
 		or	bl,al
-@@hexchr:	lodsb
+.hexchr:	lodsb
 		cmp	al,'_'
-		je	@@hexchr
+		je		.hexchr
 		call	check_hex
-		jnc	@@hexloop
-		jmp	@@got
+		jnc		.hexloop
+		jmp		.got
 
 
-@@bin:		lodsb				;binary
+.bin:		lodsb				;binary
 		sub	al,'0'
-		jc	@@nope
+		jc		.nope
 		cmp	al,1
-		ja	@@nope
+		ja		.nope
 
-@@binloop:	shl	ebx,1
+.binloop:	shl	ebx,1
 		or	bl,al
-@@binchr:	lodsb
+.binchr:	lodsb
 		cmp	al,'_'
-		je	@@binchr
+		je		.binchr
 		sub	al,'0'
-		jc	@@got
+		jc		.got
 		cmp	al,1
-		jbe	@@binloop
-		jmp	@@got
+		jbe		.binloop
+		jmp		.got
 
 
-@@decloop:	lodsb				;decimal
+.decloop:	lodsb				;decimal
 		cmp	al,'_'
-		je	@@decloop
+		je		.decloop
 		sub	al,'0'
-		jc	@@got
+		jc		.got
 		cmp	al,9
-		ja	@@got
-@@dec:		push	ecx			;multiply by 10
+		ja		.got
+.dec:		push	ecx			;multiply by 10
 		mov	ecx,ebx
 		shl	ebx,2
 		add	ebx,ecx
@@ -15979,13 +16021,13 @@ check_dd_num:	push	esi			;save original ptr
 		movzx	ecx,al
 		add	ebx,ecx
 		pop	ecx
-		jmp	@@decloop
+		jmp		.decloop
 
 
-@@got:		dec	ah			;got number, negate?
-		jnz	@@pos
+.got:		dec	ah			;got number, negate?
+		jnz		.pos
 		neg	ebx
-@@pos:
+.pos:
 		pop	eax			;pop original ptr
 		dec	esi			;back up ptr
 		mov	al,dd_num		;set dd_num
@@ -15996,25 +16038,25 @@ check_dd_num:	push	esi			;save original ptr
 ; Check for 'string' at esi
 ; c=0 if string, address in ebx, esi points after string
 ;
-check_dd_str:	cmp	[byte esi],27h		;if not ', exit with c=1
+check_dd_str:	cmp	byte [esi],27h		;if not ', exit with c=1
 		stc
-		jne	@@exit
+		jne		.exit
 
 		inc	esi			;point past '
 		mov	ebx,esi			;get string address into ebx
 
-@@chr:		lodsb				;get string chr
+.chr:		lodsb				;get string chr
 		cmp	al,27h			;if ', got string, c=0
-		je	@@got
+		je		.got
 		cmp	al,0			;if not end, get next chr
-		jne	@@chr
+		jne		.chr
 
 		dec	esi			;string not terminated, repoint to end, c=0
-		jmp	@@type
+		jmp		.type
 
-@@got:		mov	[byte esi-1],0		;zero-terminate string in-situ
-@@type:		mov	al,dd_str		;set dd_str
-@@exit:		ret
+.got:		mov	byte [esi-1],0		;zero-terminate string in-situ
+.type:		mov	al,dd_str		;set dd_str
+.exit:		ret
 ;
 ;
 ; Find debug display symbol in auto/name symbol table
@@ -16030,18 +16072,18 @@ find_dd_symbol:	push	ecx
 		lea	esi,[symbol]		;hash symbol, ecx=length, edx=hash index
 		call	hash_symbol
 
-		mov	ebx,offset ddsymbols_hash_auto		;search debug display auto symbols
+		mov	ebx,ddsymbols_hash_auto		;search debug display auto symbols
 		call	check_symbol
-		jnc	@@found
+		jnc		.found
 
-		mov	ebx,offset ddsymbols_hash_name		;search debug display name symbols
+		mov	ebx,ddsymbols_hash_name		;search debug display name symbols
 		call	check_symbol
-		jnc	@@found
+		jnc		.found
 
 		mov	al,dd_unk		;symbol not found, unknown
 		xor	ebx,ebx
 
-@@found:	pop	edi
+.found:	pop	edi
 		pop	esi
 		pop	edx
 		pop	ecx
@@ -16057,12 +16099,12 @@ enter_dd_record:
 
 		mov	ecx,[debug_display_ptr]		;get record pointer
 		cmp	ecx,debug_display_limit		;check it
-		jb	@@enter
+		jb		.enter
 
 		mov	al,0				;if overflow, set first record to dd_end
 		xor	ecx,ecx
 
-@@enter:	mov	[debug_display_type+ecx],al	;enter type
+.enter:	mov	[debug_display_type+ecx],al	;enter type
 		mov	[debug_display_value+ecx*4],ebx	;enter value
 
 		inc	[debug_display_ptr]		;inc record pointer
@@ -16092,6 +16134,7 @@ enter_dd_record:
 ;
 ; Variables
 ;
+		udataseg
 ddx		symbol_ptr			;these three must be set to the current symbol set
 ddx		symbol_ptr_limit
 ddx		symbol_hash_ptr
@@ -16121,6 +16164,7 @@ ddx		symbol_exists_ptr
 
 dbx		symbol,symbol_limit+2		;+2 for obj.method extra byte and 0
 dbx		symbol2,symbol_limit+2
+		codeseg
 ;
 ;
 ; Enter param symbols into hashed symbol table
@@ -16131,12 +16175,12 @@ enter_symbols_param:
 		call	write_symbols_param
 		mov	edx,0
 
-@@symbol:	cmp	edx,[params]
-		je	@@done
+.symbol:	cmp	edx,[params]
+		je	.done
 
 		mov	esi,edx
 		shl	esi,5
-		add	esi,offset param_names
+		add	esi,param_names
 		lea	edi,[symbol2]
 		mov	ecx,32
 	rep	movsb
@@ -16146,9 +16190,9 @@ enter_symbols_param:
 		call	enter_symbol2
 
 		inc	edx
-		jmp	@@symbol
+		jmp	.symbol
 
-@@done:		ret
+.done:		ret
 ;
 ;
 ; Enter auto symbols into hashed symbol table
@@ -16168,7 +16212,7 @@ enter_symbols:	call	hash_symbol		;hash symbol name to get length
 		lodsb				;get type
 		call	enter_symbol2		;enter symbol
 
-		cmp	[byte esi],0		;end of automatic symbols?
+		cmp	byte [esi],0		;end of automatic symbols?
 		jne	enter_symbols
 
 		ret
@@ -16178,27 +16222,27 @@ enter_symbols:	call	hash_symbol		;hash symbol name to get length
 ;
 reset_symbols_param:
 
-		mov	edi,offset symbols_hash_param
+		mov	edi,symbols_hash_param
 		jmp	reset_hash_table
 
 reset_symbols_auto:
 
-		mov	edi,offset symbols_hash_auto
+		mov	edi,symbols_hash_auto
 		jmp	reset_hash_table
 
 reset_symbols_main:
 
-		mov	edi,offset symbols_hash_main
+		mov	edi,symbols_hash_main
 		jmp	reset_hash_table
 
 reset_symbols_local:
 
-		mov	edi,offset symbols_hash_local
+		mov	edi,symbols_hash_local
 		jmp	reset_hash_table
 
 reset_symbols_inline:
 
-		mov	edi,offset symbols_hash_inline
+		mov	edi,symbols_hash_inline
 
 reset_hash_table:
 
@@ -16213,37 +16257,37 @@ reset_hash_table:
 ;
 write_symbols_param:
 
-		mov	[symbol_ptr],		offset symbols_param
-		mov	[symbol_ptr_limit],	offset symbols_param + symbols_limit_param - (1+32+1+4+1+4)
-		mov	[symbol_hash_ptr],	offset symbols_hash_param
+		mov	[symbol_ptr],symbols_param
+		mov	[symbol_ptr_limit],symbols_param + symbols_limit_param - (1+32+1+4+1+4)
+		mov	[symbol_hash_ptr],symbols_hash_param
 		ret
 
 write_symbols_auto:
 
-		mov	[symbol_ptr],		offset symbols_auto
-		mov	[symbol_ptr_limit],	offset symbols_auto + symbols_limit_auto - (1+32+1+4+1+4)
-		mov	[symbol_hash_ptr],	offset symbols_hash_auto
+		mov	[symbol_ptr],		symbols_auto
+		mov	[symbol_ptr_limit],	symbols_auto + symbols_limit_auto - (1+32+1+4+1+4)
+		mov	[symbol_hash_ptr],	symbols_hash_auto
 		ret
 
 write_symbols_main:
 
-		mov	[symbol_ptr],		offset symbols_main
-		mov	[symbol_ptr_limit],	offset symbols_main + symbols_limit_main - (1+32+1+4+1+4)
-		mov	[symbol_hash_ptr],	offset symbols_hash_main
+		mov	[symbol_ptr],		symbols_main
+		mov	[symbol_ptr_limit],	symbols_main + symbols_limit_main - (1+32+1+4+1+4)
+		mov	[symbol_hash_ptr],	symbols_hash_main
 		ret
 
 write_symbols_local:
 
-		mov	[symbol_ptr],		offset symbols_local
-		mov	[symbol_ptr_limit],	offset symbols_local + symbols_limit_local - (1+32+1+4+1+4)
-		mov	[symbol_hash_ptr],	offset symbols_hash_local
+		mov	[symbol_ptr],		symbols_local
+		mov	[symbol_ptr_limit],	symbols_local + symbols_limit_local - (1+32+1+4+1+4)
+		mov	[symbol_hash_ptr],	symbols_hash_local
 		ret
 
 write_symbols_inline:
 
-		mov	[symbol_ptr],		offset symbols_inline
-		mov	[symbol_ptr_limit],	offset symbols_inline + symbols_limit_inline - (1+32+1+4+1+4)
-		mov	[symbol_hash_ptr],	offset symbols_hash_inline
+		mov	[symbol_ptr],		symbols_inline
+		mov	[symbol_ptr_limit],	symbols_inline + symbols_limit_inline - (1+32+1+4+1+4)
+		mov	[symbol_hash_ptr],	symbols_hash_inline
 		ret
 ;
 ;
@@ -16267,15 +16311,15 @@ enter_symbol2:	push	eax
 		lea	esi,[symbol2]		;hash symbol2 name to get length and hash index
 		call	hash_symbol
 		add	edx,[symbol_hash_ptr]	;get hash table pointer
-		jmp	@@check			;append new record
+		jmp	.check		;append new record
 
-@@skip:		mov	edx,eax			;point to next record
-		movzx	eax,[byte edx]		;skip over record
+.skip:		mov	edx,eax			;point to next record
+		movzx	eax,byte [edx]		;skip over record
 		add	eax,1+4+1		;account for length byte, (symbol length in eax), value long, type byte
 		add	edx,eax
-@@check:	mov	eax,[edx]		;check link
+.check:	mov	eax,[edx]		;check link
 		or	eax,eax
-		jnz	@@skip			;if not zero, skip again
+		jnz	.skip		;if not zero, skip again
 
 		mov	[edx],edi		;link and enter record
 		mov	al,cl			;enter symbol length
@@ -16311,14 +16355,14 @@ find_param:	push	ecx
 		lea	esi,[symbol]		;hash symbol, ecx=length, edx=hash index
 		call	hash_symbol
 
-		mov	ebx,offset symbols_hash_param		;search param symbols
+		mov	ebx,symbols_hash_param		;search param symbols
 		call	check_symbol
-		jnc	@@found
+		jnc	.found
 
 		xor	eax,eax			;symbol not found
 		xor	ebx,ebx
 
-@@found:	pop	edi
+.found:	pop	edi
 		pop	esi
 		pop	edx
 		pop	ecx
@@ -16338,26 +16382,26 @@ find_symbol:	push	ecx
 		lea	esi,[symbol]		;hash symbol, ecx=length, edx=hash index
 		call	hash_symbol
 
-		mov	ebx,offset symbols_hash_auto		;search auto symbols
+		mov	ebx,symbols_hash_auto		;search auto symbols
 		call	check_symbol
-		jnc	@@found
+		jnc		.found
 
-		mov	ebx,offset symbols_hash_main		;search main symbols
+		mov	ebx,symbols_hash_main		;search main symbols
 		call	check_symbol
-		jnc	@@found
+		jnc		.found
 
-		mov	ebx,offset symbols_hash_local		;search local symbols
+		mov	ebx,symbols_hash_local		;search local symbols
 		call	check_symbol
-		jnc	@@found
+		jnc		.found
 
-		mov	ebx,offset symbols_hash_inline		;search inline symbols
+		mov	ebx,symbols_hash_inline		;search inline symbols
 		call	check_symbol
-		jnc	@@found
+		jnc		.found
 
 		xor	eax,eax			;symbol not found
 		xor	ebx,ebx
 
-@@found:	pop	edi
+.found:	pop	edi
 		pop	esi
 		pop	edx
 		pop	ecx
@@ -16377,32 +16421,32 @@ check_symbol:	push	edx			;preserve hash table index
 
 		mov	[symbol_exists],0	;clear symbol-exists flag
 
-@@link:		mov	edx,[edx]		;check for symbol record
+.link:		mov	edx,[edx]		;check for symbol record
 		cmp	edx,1			;if record < 1 then c=1
-		jc	@@nope			;if no record, symbol not found, c=1
+		jc	.nope		;if no record, symbol not found, c=1
 
-		movzx	eax,[byte edx]		;get symbol length
+		movzx	eax,byte [edx]		;get symbol length
 		inc	edx			;point edi to symbol
 		mov	edi,edx
 		add	edx,eax			;point edx to next link 
 		add	edx,4+1
 		cmp	eax,ecx			;if symbol size mismatch, check next link
-		jne	@@link
+		jne		.link
 
 		push	ecx			;symbol size match, compare symbol names
 		push	esi
 	repe	cmpsb				;c=0 if match
 		pop	esi
 		pop	ecx
-		jne	@@link			;if names mismatch, check next link
+		jne	.link		;if names mismatch, check next link
 
 		mov	ebx,[edx-1-4]		;found symbol, get value
-		movzx	eax,[byte edx-1]	;get type
+		movzx	eax,byte [edx-1]	;get type
 
 		mov	[symbol_exists],1	;set symbol-exists flag and save ptr
 		mov	[symbol_exists_ptr],edx	;c=0
 
-@@nope:		pop	edx
+.nope:		pop	edx
 		ret
 ;
 ;
@@ -16417,11 +16461,11 @@ hash_symbol:	push	eax
 		xor	ecx,ecx			;reset symbol length
 		xor	edx,edx			;reset hash
 
-@@hash:		xor	eax,eax			;get symbol chr into eax
+.hash:		xor	eax,eax			;get symbol chr into eax
 		lodsb
 		inc	ecx			;inc length
 		cmp	al,0			;if chr = 0, finish hash
-		je	@@finish
+		je		.finish
 		add	edx,eax			;hash += chr
 		mov	eax,edx			;hash += (hash << 10)
 		shl	eax,10
@@ -16429,9 +16473,9 @@ hash_symbol:	push	eax
 		mov	eax,edx			;hash ^= (hash >> 6)
 		shr	eax,6
 		xor	edx,eax
-		jmp	@@hash			;next chr
+		jmp	.hash		;next chr
 
-@@finish:	mov	eax,edx			;hash += (hash << 3)
+.finish:	mov	eax,edx			;hash += (hash << 3)
 		shl	eax,3
 		add	edx,eax
 		mov	eax,edx			;hash ^= (hash >> 11)
@@ -16495,24 +16539,28 @@ enter_symbol2_print:
 ;
 ; Find non-word 3-chr symbol
 ;
-find_symbol_s3:	syms	'+//',	type_op,	oc_remu
-		syms	'+<=',	type_op,	oc_lteu
-		syms	'+>=',	type_op,	oc_gteu
-		syms	'<=>',	type_op,	oc_ltegt
+; NOTE: fasm needs these quoted strings in reverse order, since
+; they get converted to LE byte-order numbers.
+find_symbol_s3:	syms	'//+',	type_op,	oc_remu
+		syms	'=<+',	type_op,	oc_lteu
+		syms	'=>+',	type_op,	oc_gteu
+		syms	'>=<',	type_op,	oc_ltegt
 
-		syms	'<>.',	type_op,	oc_fne
-		syms	'==.',	type_op,	oc_fe
-		syms	'<=.',	type_op,	oc_flte
-		syms	'>=.',	type_op,	oc_fgte
+		syms	'.><',	type_op,	oc_fne
+		syms	'.==',	type_op,	oc_fe
+		syms	'.=<',	type_op,	oc_flte
+		syms	'.=>',	type_op,	oc_fgte
 
 		ret
 ;
 ;
 ; Find non-word 2-chr symbol
 ;
-find_symbol_s2:	syms	':=',	type_assign,	0
+; NOTE: fasm needs these quoted strings in reverse order, since
+; they get converted to LE byte-order numbers.
+find_symbol_s2:	syms	'=:',	type_assign,	0
 		syms	'@@',	type_atat,	0
-		syms	'^@',	type_upat	0
+		syms	'@^',	type_upat,	0
 		syms	'..',	type_dotdot,	0
 		syms	'~~',	type_tiltil,	0
 		syms	'++',	type_inc,	0
@@ -16521,28 +16569,28 @@ find_symbol_s2:	syms	':=',	type_assign,	0
 
 		syms	'>>',	type_op,	oc_shr
 		syms	'<<',	type_op,	oc_shl
-		syms	'+/',	type_op,	oc_divu
+		syms	'/+',	type_op,	oc_divu
 		syms	'//',	type_op,	oc_rem
-		syms	'#>',	type_op,	oc_fge
-		syms	'<#',	type_op,	oc_fle
-		syms	'+<',	type_op,	oc_ltu
-		syms	'<=',	type_op,	oc_lte
+		syms	'>#',	type_op,	oc_fge
+		syms	'#<',	type_op,	oc_fle
+		syms	'<+',	type_op,	oc_ltu
+		syms	'=<',	type_op,	oc_lte
 		syms	'==',	type_op,	oc_e
-		syms	'<>',	type_op,	oc_ne
-		syms	'>=',	type_op,	oc_gte
-		syms	'+>',	type_op,	oc_gtu
+		syms	'><',	type_op,	oc_ne
+		syms	'=>',	type_op,	oc_gte
+		syms	'>+',	type_op,	oc_gtu
 		syms	'!!',	type_op,	oc_lognot
 		syms	'&&',	type_op,	oc_logand
 		syms	'^^',	type_op,	oc_logxor
 		syms	'||',	type_op,	oc_logor
 
 ;		syms	'-.',	type_op,	oc_fneg		(uses oc_fsub symbol)
-		syms	'<.',	type_op,	oc_flt
-		syms	'>.',	type_op,	oc_fgt
-		syms	'+.',	type_op,	oc_fadd
-		syms	'-.',	type_op,	oc_fsub
-		syms	'*.',	type_op,	oc_fmul
-		syms	'/.',	type_op,	oc_fdiv
+		syms	'.<',	type_op,	oc_flt
+		syms	'.>',	type_op,	oc_fgt
+		syms	'.+',	type_op,	oc_fadd
+		syms	'.-',	type_op,	oc_fsub
+		syms	'.*',	type_op,	oc_fmul
+		syms	'./',	type_op,	oc_fdiv
 
 		ret
 ;
@@ -16670,8 +16718,8 @@ automatic_symbols:
 	sym	type_debug,		0,		'DEBUG'		;debug
 
 	sym	type_debug_cmd,		dc_dly,		'DLY'		;debug commands
-	sym	type_debug_cmd,		dc_pc_key	'PC_KEY'
-	sym	type_debug_cmd,		dc_pc_mouse	'PC_MOUSE'
+	sym	type_debug_cmd,		dc_pc_key,	'PC_KEY'
+	sym	type_debug_cmd,		dc_pc_mouse,'PC_MOUSE'
 
 	sym	type_debug_cmd,		00100100b,	'ZSTR'
 	sym	type_debug_cmd,		00100110b,	'ZSTR_'
@@ -17729,5 +17777,3 @@ automatic_symbols:
 ;*  End  *
 ;*********
 ;
-		ends
-		end
