@@ -19,9 +19,7 @@ PNut_v37 clock_setter -c
 set /A ERR = %ERR% + %ERRORLEVEL%
 type error.txt
 
-set /A PLATFORM=unix
-fasm p2com.asm bin\p2com.elf
-set /A PLATFORM=win32
+set PLATFORM=win32
 fasm p2com.asm bin\p2com.coff
 
 if %ERR% NEQ 0 (
