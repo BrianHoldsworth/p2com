@@ -9,6 +9,12 @@ On Windows, crank.bat should be run. You will need to have fasm in your path.
 
 On Unix like systems, use build.sh instead. Again, you will need fasm in your path. Because the code needs pre-assembled PASM code from modules (such as the Spin2 interpreter and the debugging features), the Windows "PNut" program is used to bootstrap this part. Therefore, you also need wine installed so that the build script can run "PNut" in a fake Win32 environment.
 
+TODO
+----
+
+- [ ] Automated functional tests for compiler
+- [ ] Compatibility with x64 ISA and binaries
+
 Related Projects
 ----------------
 
