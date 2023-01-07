@@ -18,4 +18,5 @@ TODO
 Related Projects
 ----------------
 
-[pmut](https://github.com/BrianHoldsworth/pmut) - A Linux multi-tool for Propeller 2 development, based off "PNut" for Windows.
+- [PNut](https://github.com/parallaxinc/P2_PNut_Public) - (upstream) Windows IDE multi-tool for Propeller 2.
+- [pmut](https://github.com/BrianHoldsworth/pmut) - (downstream) Linux multi-tool for Propeller 2 development.
