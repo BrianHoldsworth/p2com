@@ -5940,7 +5940,7 @@ insert_interpreter:
 .@_debugnop2_	=	0E50h
 .@_debugnop3_	=	0E54h
 
-interpreter:	file	"Spin2_interpreter.obj"
+with_interpreter
 interpreter_end:
 ;
 ;
@@ -6046,7 +6046,7 @@ insert_debugger:
 .@_rxpin_	=	144h
 .@_baud_	=	148h
 
-debugger:	file "Spin2_debugger.obj"
+with_debugger
 debugger_end:
 ;
 ;
@@ -6087,7 +6087,7 @@ insert_flash_loader:
 .@_checksum_	=	04h
 .@_debugnop_	=	08h
 
-flash_loader:	file	"flash_loader.obj"
+with_flash_loader
 flash_loader_end:
 ;
 ;
@@ -6136,7 +6136,7 @@ insert_clock_setter:
 .@_clkmode2_	=	038h
 .@_appblocks_	=	03Ch
 
-clock_setter:	file	"clock_setter.obj"
+with_clock_setter
 clock_setter_end:
 ;
 ;

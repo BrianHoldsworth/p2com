@@ -1,5 +1,8 @@
 bin/
+backup/
+lib/
+p2c
+p2c.lps
 .vscode/
-*.lst
 *.obj
-*.txt
+*.bin

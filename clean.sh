@@ -1,2 +1,3 @@
 rm -fr bin
-rm *.txt *.lst *.obj
+rm *.obj *.bin
+rm p2c
