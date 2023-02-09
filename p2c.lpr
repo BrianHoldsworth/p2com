@@ -145,8 +145,8 @@ end;
 procedure WriteHelp(err: string='');
 begin
   if Length(err) > 0 then WriteLn(err);
-  Writeln('Usage: p2c [-v] spin2file');
-  Writeln('where -v is optional "verify", used for automated compiler tests.');
+  Writeln('Usage: p2c [-v/--verify] spin2file');
+  Writeln('where --verify is optional for automated compiler tests.');
 end;
 
 procedure SetFilename(const NewFilename: string);

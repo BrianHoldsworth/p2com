@@ -2,7 +2,7 @@
 mkdir -p bin
 if ! [ -f bin/p2com.elf ]; then
 PLATFORM=unix fasm p2com.asm bin/p2com.elf
-#PLATFORM=win32 fasm p2com.asm bin/p2com.coff
+PLATFORM=win32 fasm p2com.asm bin/p2com.coff
 fi
 if ! [ -f p2c ]; then
 ~/fpcupdeluxe/lazarus/lazbuild -B p2c.lpi
@@ -22,5 +22,5 @@ if ! [ -f clock_setter.obj ]; then
 fi
 PLATFORM=unix_full fasm p2com.asm bin/p2com.elf
 ~/fpcupdeluxe/lazarus/lazbuild -B p2c.lpi
-#PLATFORM=win32 fasm p2com.asm bin/p2com.coff
+#PLATFORM=win32_full fasm p2com.asm bin/p2com.coff
 #~/fpcupdeluxe/lazarus/lazbuild -B --operating-system=win32 p2c.lpi
